@@ -4,6 +4,6 @@
  * protected by the Row Level Security policies in supabase-setup.sql.
  */
 window.ULTRA_CLOUD = {
-  supabaseUrl: '',
-  supabaseAnonKey: ''
+  supabaseUrl: 'https://fsugeltcnbxqpcrlenmf.supabase.co',
+  supabaseAnonKey: 'sb_publishable_waQLruYQ6bJwt4fh98cGPw_FLbQ99la'
 };
