@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08090E">
+<title>ULTRA — Streak Tracker</title>
+<style>
+/* ============================================================
+   ULTRA — personal streak tracker. Desktop-first, single page.
+   Dark and flat. Blue is the actionable colour, green is done,
+   gold is the Ultra streak. The flame runs a heat scale:
+   orange when young, blue-white once the streak is long.
+   ============================================================ */
+:root{
+  color-scheme: dark;
+  --bg:#08090E;
+  --card:#111319; --card2:#171A22; --card3:#1E222C;
+  --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.13);
+  --txt:#F2F4F8; --dim:#8A90A0; --dim2:#565C6B;
+  --blue:#4EA5FF; --blueBtn:#2C7BD0; --blueSoft:rgba(78,165,255,.13);
+  --gold:#E7B93C;
+  --green:#43D15A;
+  --amber:#F0B03C;
+  --purple:#B06CFF;
+  --red:#EC4B5E;
+  --r:12px;
+  --font:-apple-system,'SF Pro Display','SF Pro Rounded',BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--font);
+  -webkit-font-smoothing:antialiased;font-size:14px;line-height:1.45}
+button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:0 26px 64px}
+
+/* ---------- symbols ---------- */
+.sym{width:15px;height:15px;flex:none;stroke:currentColor;fill:none;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:var(--dim);opacity:.9}
+.flame{flex:none}
+.flame .o{fill:currentColor;stroke:none}
+.flame .i{fill:#fff;opacity:.34;stroke:none}
+.f0{color:#454B5A}
+.f1{color:#FF7A18}
+.f2{color:#FFC53D}
+.f3{color:#4EA5FF}
+.f4{color:#4C6BFF}
+.f5{color:#B06CFF}
+.f6{color:#7DF0FF}
+.f1,.f2,.f3,.f4,.f5,.f6{filter:drop-shadow(0 0 5px currentColor)}
+.flame.rest-flame{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple))}
+.flame.ignite{transform-box:fill-box;transform-origin:50% 82%;
+  animation:flame-in .52s cubic-bezier(.2,.9,.25,1.35) both}
+.flame.ignite .i{transform-box:fill-box;transform-origin:50% 90%;
+  animation:flame-flicker 1.35s .52s ease-in-out 2 alternate}
+@keyframes flame-in{
+  0%{opacity:0;transform:translateY(5px) scale(.42) rotate(-8deg);filter:drop-shadow(0 0 0 currentColor)}
+  58%{opacity:1;transform:translateY(-2px) scale(1.16) rotate(4deg);filter:drop-shadow(0 0 9px currentColor)}
+  78%{transform:translateY(1px) scale(.94) rotate(-2deg)}
+  100%{opacity:1;transform:none;filter:drop-shadow(0 0 5px currentColor)}
+}
+@keyframes flame-flicker{
+  from{opacity:.24;transform:translateY(1px) scale(.88,.96)}
+  to{opacity:.46;transform:translateY(-1px) scale(1.08,1.03)}
+}
+
+/* ---------- header ---------- */
+header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.hin{max-width:1180px;margin:0 auto;padding:12px 26px;display:flex;align-items:center;gap:22px}
+.me{display:flex;align-items:center;gap:11px;flex:none}
+.avatar{width:36px;height:36px;border-radius:50%;flex:none;overflow:hidden;padding:0;
+  background:linear-gradient(150deg,#3A86D8,#1B4E86);display:grid;place-items:center;
+  font-size:15px;font-weight:700;color:#EAF3FF;border:1px solid var(--line2);
+  transition:border-color .16s,box-shadow .16s,transform .16s cubic-bezier(.2,.8,.2,1)}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar:hover{border-color:var(--blue);box-shadow:0 0 0 3px rgba(78,165,255,.16)}
+.who{display:flex;flex-direction:column;line-height:1.2}
+.who b{font-size:14.5px;font-weight:700;letter-spacing:-.01em}
+.who span{font-size:9px;font-weight:700;letter-spacing:.22em;color:var(--dim2)}
+.clock{display:flex;align-items:baseline;gap:9px;font-variant-numeric:tabular-nums}
+.clock .t{font-size:15px;font-weight:600;letter-spacing:.02em;color:var(--blue)}
+.clock .z{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--dim2)}
+.hstreak{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:99px;
+  background:var(--card2);border:1px solid var(--line);font-size:13px;font-weight:700;
+  font-variant-numeric:tabular-nums;flex:none;margin-left:auto}
+.lock{font-size:11px;font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums;letter-spacing:.03em;flex:none}
+.lock b{color:var(--txt);font-weight:700}
+.lock.soon b{color:var(--amber)}
+.saved{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--dim2);flex:none}
+.saved.bad{color:var(--red)}
+.cloud-status{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim2);
+  border:1px solid var(--line);border-radius:99px;padding:5px 9px;flex:none;max-width:104px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;transition:color .16s,border-color .16s,background .16s}
+.cloud-status:hover{color:var(--blue);border-color:rgba(78,165,255,.4);background:var(--blueSoft)}
+.cloud-status.on{color:var(--green)}
+.cloud-status.busy{color:var(--amber)}
+.cloud-status.bad{color:var(--red)}
+
+/* ---------- section headings ---------- */
+.sec{display:flex;align-items:center;gap:14px;margin:38px 0 14px}
+.sec h2{font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#7C93AE;margin:0;flex:none}
+.sec .rule{flex:1;height:1px;background:var(--line)}
+.sec .aside{font-size:11px;color:var(--dim2);font-weight:600;letter-spacing:.04em;flex:none}
+
+/* ---------- ultra ---------- */
+.ultra{display:flex;align-items:flex-end;gap:30px;flex-wrap:wrap;
+  border:1px solid rgba(231,185,60,.28);background:rgba(231,185,60,.045);
+  border-radius:var(--r);padding:24px 26px;margin-top:26px}
+.ultra.dead{border-color:var(--line2);background:var(--card)}
+.ultra .main{flex:none}
+.ultra .cap{font-size:10.5px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:var(--gold)}
+.ultra.dead .cap{color:var(--dim)}
+.ultra .big{display:flex;align-items:center;gap:13px;margin-top:5px}
+.ultra .big b{font-size:64px;line-height:.9;font-weight:700;letter-spacing:-.04em;color:var(--gold)}
+.ultra.dead .big b{color:var(--dim2)}
+.ultra .big span{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);align-self:flex-end;padding-bottom:7px}
+.ultra .side{display:flex;gap:34px;margin-left:auto;padding-bottom:5px;flex-wrap:wrap}
+.ultra .side div{min-width:74px}
+.ultra .side .k{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--dim2)}
+.ultra .side .v{font-size:19px;font-weight:700;margin-top:3px;letter-spacing:-.01em}
+.ultra .side .v.b{color:var(--blue)}
+.ultra .side .v.p{color:var(--purple)}
+.note{margin-top:12px;font-size:12.5px;color:var(--amber);font-weight:600}
+
+/* ---------- today ---------- */
+.today-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+/* the aspect-ratio day cells carry a large automatic minimum size, so every
+   track here is minmax(0,1fr) and every grid child min-width:0 — otherwise
+   the calendars push their cards wider than the page */
+.tcard,.ccard,.cal,.cell{min-width:0}
+.tcard{border:1px solid var(--line);background:var(--card);border-radius:var(--r);padding:15px 15px 14px;
+  display:flex;flex-direction:column;gap:12px;transition:border-color .18s,background .18s}
+.tcard.changed{animation:card-confirm .46s cubic-bezier(.2,.8,.2,1)}
+.tcard.done{background:rgba(67,209,90,.055);border-color:rgba(67,209,90,.32)}
+.tcard.part{background:rgba(240,176,60,.05);border-color:rgba(240,176,60,.32)}
+.tcard.rest{background:rgba(176,108,255,.07);border-color:rgba(176,108,255,.42)}
+.th{display:flex;align-items:center;gap:8px}
+.th b{font-size:13.5px;font-weight:600;letter-spacing:-.005em;flex:1;min-width:0}
+.th .n{display:flex;align-items:center;gap:5px;font-size:17px;font-weight:700;letter-spacing:-.02em;flex:none}
+.cycle-goal{font-size:.62em;color:var(--dim);letter-spacing:0;margin-left:-3px}
+.btns{display:flex;flex-direction:column;gap:6px;margin-top:auto}
+.go{padding:10px 8px;border-radius:8px;border:1px solid transparent;background:var(--blueBtn);
+  font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#EAF3FF;
+  transition:background .16s,color .16s,transform .13s cubic-bezier(.2,.8,.2,1),box-shadow .18s;
+  user-select:none;-webkit-user-select:none;transform-origin:center}
+.go:hover{background:#3A8FE6}
+.go.on{background:var(--green);color:#04240B}
+.go.on.amber{background:var(--amber);color:#301F02}
+.go.on:hover{filter:brightness(1.07)}
+.go.changed{animation:button-confirm .42s cubic-bezier(.2,.9,.25,1.35)}
+.hint{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
+.hint.red{color:var(--red)}
+.hint.dim{color:var(--dim2)}
+.hint.good{color:var(--green)}
+.hint.purple{color:var(--purple)}
+.rest-day{padding:10px 8px;border-radius:8px;border:1px solid rgba(176,108,255,.34);
+  background:rgba(176,108,255,.12);color:#D9B8FF;text-align:center;font-size:10.5px;font-weight:700;
+  letter-spacing:.09em;text-transform:uppercase}
+
+/* ---------- month nav ---------- */
+.mnav{display:flex;align-items:center;gap:10px;flex:none}
+.mnav button{width:26px;height:26px;border-radius:6px;border:1px solid var(--line);color:var(--dim);
+  display:grid;place-items:center;font-size:13px;line-height:1;
+  transition:transform .13s cubic-bezier(.2,.8,.2,1),background .16s,border-color .16s,color .16s}
+.mnav button:hover:not(:disabled){background:var(--blueSoft);border-color:rgba(78,165,255,.4);color:var(--blue)}
+.mnav button:disabled{opacity:.28;cursor:default}
+.mnav b{font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;min-width:132px;text-align:center}
+
+/* ---------- calendars ---------- */
+.cals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.ccard{border:1px solid var(--line);background:var(--card);border-radius:var(--r);padding:15px}
+.ccard.master{border-color:rgba(231,185,60,.28)}
+.ch{display:flex;align-items:center;gap:8px;margin-bottom:13px}
+.ch b{font-size:13px;font-weight:600;flex:1}
+.ch .n{display:flex;align-items:center;gap:5px;font-size:15px;font-weight:700;letter-spacing:-.01em}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .dw{font-size:8.5px;font-weight:700;letter-spacing:.04em;color:var(--dim2);text-align:center;padding-bottom:3px}
+.cell{aspect-ratio:1;border-radius:5px;display:grid;place-items:center;font-size:10.5px;font-weight:600;
+  background:#14161D;border:1px solid transparent;color:var(--dim2);font-variant-numeric:tabular-nums;
+  position:relative;padding:0;min-height:0;transition:transform .13s cubic-bezier(.2,.8,.2,1),
+  filter .16s,border-color .16s,background .16s}
+.cell.blank{background:none}
+.cell.green{background:rgba(67,209,90,.17);border-color:rgba(67,209,90,.4);color:#A8ECB6}
+.cell.amber{background:rgba(240,176,60,.15);border-color:rgba(240,176,60,.42);color:#F6D9A2}
+.cell.red{background:rgba(236,75,94,.14);border-color:rgba(236,75,94,.45);color:#F5B0B8}
+.cell.gold{background:rgba(231,185,60,.9);border-color:transparent;color:#2A1F00;font-weight:700}
+.cell.blue{background:rgba(78,165,255,.18);border-color:rgba(78,165,255,.42);color:#B4D7FF}
+.cell.purple{background:rgba(176,108,255,.2);border-color:rgba(176,108,255,.55);color:#E0C4FF;
+  box-shadow:inset 0 0 12px rgba(176,108,255,.12)}
+.cell.today{box-shadow:0 0 0 1.5px var(--blue)}
+.cell.future{opacity:.25}
+.cell.edit{cursor:pointer}
+.cell.edit:hover{border-color:var(--blue);filter:brightness(1.3)}
+.cell.changed{animation:cell-confirm .4s cubic-bezier(.2,.9,.25,1.3)}
+.cstat{display:flex;justify-content:space-between;gap:8px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line);
+  font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dim2)}
+.cstat b{color:var(--txt);font-weight:700;font-variant-numeric:tabular-nums}
+.cstat .rest-count b{color:var(--purple)}
+.calhelp{margin-top:12px;font-size:11px;color:var(--dim2)}
+
+/* ---------- totals ---------- */
+table{width:100%;border-collapse:collapse;font-size:13px}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+th{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#6E8398;
+  text-align:right;padding:0 0 9px;font-variant-numeric:tabular-nums}
+th:first-child{text-align:left}
+td{padding:10px 0;border-top:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+td:first-child{text-align:left;font-weight:500}
+.nm{display:inline-flex;align-items:center;gap:9px}
+tr.total td{border-top:1px solid var(--line2);color:var(--gold);font-weight:700}
+.purple-total{color:var(--purple)}
+.pc{color:var(--dim2);font-weight:600}
+
+/* ---------- data ---------- */
+details{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}
+summary{font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--dim2);cursor:pointer;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary:hover{color:var(--blue)}
+.dwrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+textarea{width:100%;height:110px;border-radius:8px;background:#0C0E14;border:1px solid var(--line2);color:var(--dim);
+  padding:10px;font-size:10.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
+.dbtn{margin-top:8px;padding:9px 14px;border-radius:7px;border:1px solid var(--line2);background:var(--card3);
+  font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);
+  transition:transform .13s cubic-bezier(.2,.8,.2,1),color .16s,border-color .16s,background .16s}
+.dbtn:hover{color:var(--blue);border-color:rgba(78,165,255,.4)}
+.dbtn.danger:hover{color:var(--red);border-color:rgba(236,75,94,.4)}
+.dlbl{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--dim2);margin-bottom:7px}
+.cloudbox{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:14px}
+.cloudrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cloudrow+.cloudrow{margin-top:9px}
+.cloud-input{height:36px;min-width:190px;flex:1;border-radius:7px;border:1px solid var(--line2);background:#0C0E14;
+  color:var(--txt);font:inherit;padding:0 10px;outline:none}
+.cloud-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blueSoft)}
+.cloudmsg{font-size:11px;color:var(--dim);margin-top:9px;min-height:16px}
+.cloud-user{font-size:12px;color:var(--txt);font-weight:600;flex:1}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(10px);background:var(--card3);
+  border:1px solid var(--line2);border-radius:8px;padding:9px 16px;font-size:12px;font-weight:600;
+  opacity:0;pointer-events:none;transition:.2s;z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%)}
+
+/* ---------- Ultra-day celebration ---------- */
+.ultra-celebration{position:fixed;inset:0;z-index:100;overflow:hidden;pointer-events:none;
+  background:radial-gradient(circle at 50% 50%,rgba(78,165,255,.18),rgba(8,9,14,0) 52%);
+  animation:celebration-fade 2.9s ease-out both}
+.ultra-blaze{position:absolute;inset:0;display:grid;place-content:center;text-align:center;
+  filter:drop-shadow(0 0 34px rgba(78,165,255,.7));animation:ultra-blaze 1.9s cubic-bezier(.16,.85,.24,1) both}
+.ultra-blaze b{display:block;margin-top:14px;font-size:clamp(20px,4vw,42px);letter-spacing:.22em;
+  text-indent:.22em;color:#fff;text-shadow:0 0 24px var(--blue);animation:ultra-title 1.9s ease-out both}
+.confetti{position:absolute;top:-18px;width:8px;height:15px;border-radius:2px;background:var(--c);
+  opacity:0;will-change:transform;animation:confetti-fall var(--d) var(--delay) cubic-bezier(.16,.7,.3,1) forwards}
+@keyframes celebration-fade{0%,72%{opacity:1}100%{opacity:0}}
+@keyframes ultra-blaze{
+  0%{opacity:0;transform:translateY(10vh) scale(.15) rotate(-12deg)}
+  32%{opacity:1;transform:translateY(-2vh) scale(1.16) rotate(4deg)}
+  52%{transform:translateY(0) scale(.96) rotate(-2deg)}
+  78%{opacity:1;transform:scale(1)}
+  100%{opacity:0;transform:translateY(-5vh) scale(1.35)}
+}
+@keyframes ultra-title{
+  0%,22%{opacity:0;transform:translateY(12px);letter-spacing:.1em}
+  42%,78%{opacity:1;transform:none;letter-spacing:.22em}
+  100%{opacity:0;transform:translateY(-8px)}
+}
+@keyframes confetti-fall{
+  0%{opacity:0;transform:translate3d(0,-8vh,0) rotate(0deg)}
+  10%{opacity:1}
+  82%{opacity:1}
+  100%{opacity:0;transform:translate3d(var(--x),112vh,0) rotate(var(--r))}
+}
+
+.go:active,.cell.edit:active,.mnav button:active:not(:disabled),.dbtn:active,.avatar:active{
+  transform:translateY(1px) scale(.94)}
+@keyframes button-confirm{
+  0%{transform:scale(.94)}
+  48%{transform:scale(1.045);box-shadow:0 0 0 4px rgba(67,209,90,.14)}
+  100%{transform:none;box-shadow:none}
+}
+@keyframes cell-confirm{
+  0%{transform:scale(.82)}
+  55%{transform:scale(1.12);filter:brightness(1.45)}
+  100%{transform:none;filter:none}
+}
+@keyframes card-confirm{
+  0%{transform:translateY(2px);box-shadow:0 0 0 rgba(78,165,255,0)}
+  45%{transform:translateY(-2px);box-shadow:0 8px 24px rgba(78,165,255,.1)}
+  100%{transform:none;box-shadow:none}
+}
+
+@media(max-width:1040px){
+  .cals{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .today-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:720px){
+  .wrap{padding:0 16px 48px}.hin{padding:12px 16px;gap:12px}
+  .cals{grid-template-columns:1fr}.today-grid{grid-template-columns:1fr}
+  .dwrap{grid-template-columns:1fr}
+  .ultra{padding:20px}.ultra .big b{font-size:52px}.ultra .side{margin-left:0;gap:24px}
+  .clock,.lock,.saved{display:none}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hin">
+    <span class="me">
+      <button class="avatar" id="avatarBtn" title="Change photo" aria-label="Change Plato's profile photo">
+        <img src="assets/plato-profile.jpg" alt="Plato">
+      </button>
+      <span class="who"><b id="who">Plato</b><span>ULTRA</span></span>
+    </span>
+    <input type="file" id="avatarFile" accept="image/*" hidden>
+    <span class="clock"><span class="t num" id="clock">--:--:--</span><span class="z">Dublin</span></span>
+    <span class="hstreak" id="hstreak"></span>
+    <span class="lock" id="lock"></span>
+    <span class="saved" id="saved"></span>
+    <button class="cloud-status" id="cloudStatus" title="Open cloud sync">Local only</button>
+  </div>
+</header>
+
+<main class="wrap" id="app"></main>
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+'use strict';
+
+/* =========================================================
+   CONFIG
+   ========================================================= */
+const TZ = 'Europe/Dublin';
+const ROLLOVER = 4;                 // the day flips at 04:00 Dublin
+const KEY = 'ultra.streaks.v1';
+const AVATAR_KEY = 'ultra.avatar.v1';
+const YEARLY_REST_GOAL = 20;
+
+// kind: strict = no buffer | grace = one missed day allowed | eat = graded
+const HABITS = [
+  { id:'eat',   name:'Eat Well',   sym:'fork',  kind:'eat', goal:365,
+    actions:[{v:1,label:'Protein',tone:'amber'},{v:2,label:'Protein + kcal'}] },
+  { id:'read',  name:'Reading',    sym:'book',  kind:'grace',  goal:365, actions:[{v:2,label:'Done'}] },
+  { id:'reels', name:'No Reels',   sym:'phone', kind:'strict', goal:365, actions:[{v:2,label:'Done'}] },
+  { id:'nofap', name:'No Fap',     sym:'lock',  kind:'strict', goal:14, reset:true, actions:[{v:2,label:'Done'}] },
+  { id:'room',  name:'Room Clean', sym:'broom', kind:'grace',  goal:365, actions:[{v:2,label:'Done'}] },
+];
+
+/* line symbols, drawn rather than emoji */
+const SYM = {
+  phone:'<rect x="6" y="2.6" width="12" height="18.8" rx="2.6"/><path d="M10.4 5.6h3.2"/><path d="M3.6 20.4 20.4 3.6"/>',
+  lock: '<rect x="4.6" y="10.4" width="14.8" height="10.6" rx="2.2"/><path d="M8.1 10.4V7.6a3.9 3.9 0 0 1 7.8 0v2.8"/>',
+  broom:'<path d="M12 3v9"/><path d="M8 12h8l1.6 8H6.4z"/><path d="M12 12.6v7"/>',
+  fork: '<path d="M5.2 3v5.1a2.2 2.2 0 0 0 4.4 0V3"/><path d="M7.4 10.3V21"/><path d="M16.6 3v18"/><path d="M16.6 3c2.3 1.3 2.9 4 2.3 6.5-.3 1.2-1.2 1.9-2.3 1.9"/>',
+  book: '<path d="M12 6.6v13"/><path d="M12 6.6C10.1 5.1 7.4 4.6 3.8 4.9v12.6c3.6-.3 6.3.2 8.2 1.7"/><path d="M12 6.6c1.9-1.5 4.6-2 8.2-1.7v12.6c-3.6-.3-6.3.2-8.2 1.7"/>'
+};
+function sym(name){ return '<svg class="sym" viewBox="0 0 24 24" aria-hidden="true">'+SYM[name]+'</svg>'; }
+
+/* the flame runs a heat scale — orange when young, blue-white when long.
+   Liftoff never published its own thresholds, so these are ours. */
+const FLAME_STEPS = [1, 7, 14, 30, 60, 100];
+function flameTier(n){
+  if(n <= 0) return 0;
+  let t = 0;
+  for(let i=0;i<FLAME_STEPS.length;i++) if(n >= FLAME_STEPS[i]) t = i+1;
+  return t;
+}
+function flame(n, size, ignite, rest){
+  return '<svg class="flame f'+flameTier(n)+(ignite?' ignite':'')+(rest?' rest-flame':'')+'" width="'+size+'" height="'+size+'" viewBox="0 0 24 24" aria-hidden="true">'
+    + '<path class="o" d="M12 2.2c.6 2.6-.4 4.4-1.9 5.9-1.7 1.7-3.6 3.3-3.6 6.2 0 3.4 2.5 5.9 5.5 5.9s5.5-2.5 5.5-6c0-2.6-1.4-4.3-2.6-5.6.1 1.3-.4 2.3-1.2 2.9.7-3.1-.3-6.5-1.7-9.3z"/>'
+    + '<path class="i" d="M12 12.4c1.1 1.1 1.9 2.2 1.9 3.4 0 1.4-1 2.4-2.2 2.4s-2.1-.9-2.1-2.2c0-1.3 1.2-2.2 2.4-3.6z"/>'
+    + '</svg>';
+}
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DW = ['M','T','W','T','F','S','S'];
+const pad = n => String(n).padStart(2,'0');
+
+/* =========================================================
+   DUBLIN TIME
+   Every date here is a Dublin calendar day, shifted so the day
+   ends at 04:00 — 2am on Sunday still counts as Saturday.
+   ========================================================= */
+const DTF = new Intl.DateTimeFormat('en-GB', {
+  timeZone:TZ, year:'numeric', month:'2-digit', day:'2-digit',
+  hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+});
+function dublin(){
+  const p = {};
+  DTF.formatToParts(new Date()).forEach(x => { if(x.type !== 'literal') p[x.type] = x.value; });
+  return { y:+p.year, mo:+p.month, d:+p.day, h:(+p.hour)%24, mi:+p.minute, s:+p.second };
+}
+function toDate(k){ const p = k.split('-').map(Number); return new Date(p[0], p[1]-1, p[2]); }
+function keyOf(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function addDays(k, n){ const d = toDate(k); d.setDate(d.getDate()+n); return keyOf(d); }
+function diffDays(a, b){ return Math.round((toDate(b) - toDate(a)) / 86400000); }
+function logicalToday(){
+  const n = dublin();
+  const k = n.y+'-'+pad(n.mo)+'-'+pad(n.d);
+  return n.h < ROLLOVER ? addDays(k, -1) : k;
+}
+function secsToLock(){
+  const n = dublin();
+  const cur = n.h*3600 + n.mi*60 + n.s, target = ROLLOVER*3600;
+  return cur < target ? target - cur : 86400 + target - cur;
+}
+function pretty(k){
+  const d = toDate(k);
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+}
+let TODAY = logicalToday();
+let YEST  = addDays(TODAY, -1);
+const editable = k => k <= TODAY;      // any past day can be corrected
+
+/* =========================================================
+   STORAGE — browser-local, verified at boot
+   ========================================================= */
+let storageOK = false, lastSaved = null;
+(function probe(){
+  try{
+    localStorage.setItem('ultra.probe','1');
+    storageOK = localStorage.getItem('ultra.probe') === '1';
+    localStorage.removeItem('ultra.probe');
+  }catch(e){ storageOK = false; }
+})();
+
+let S = null;
+let CLOUD = null, cloudUser = null, cloudSaveT = null, cloudQueue = Promise.resolve();
+let cloudMessage = '', cloudTone = '';
+function blank(){ const log = {}; HABITS.forEach(h => log[h.id] = {}); return { v:2, start:TODAY, log:log, updatedAt:null }; }
+function normaliseState(p){
+  if(!p || !p.log) return null;
+  HABITS.forEach(h => { if(!p.log[h.id]) p.log[h.id] = {}; });
+  if(!p.start) p.start = TODAY;
+  if(!p.updatedAt) p.updatedAt = null;
+  p.v = 2;
+  return p;
+}
+function load(){
+  if(!storageOK) return blank();
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return blank();
+    return normaliseState(JSON.parse(raw)) || blank();
+  }catch(e){ return blank(); }
+}
+function writeLocal(){
+  if(!storageOK) return;
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); lastSaved = dublin(); }
+  catch(e){ storageOK = false; }
+}
+function save(){
+  S.updatedAt = new Date().toISOString();
+  writeLocal();
+  scheduleCloudSave();
+}
+
+function setAvatar(src){
+  const img = document.createElement('img');
+  img.src = src;
+  img.alt = 'Plato';
+  img.addEventListener('error', function(){ $('#avatarBtn').textContent = 'P'; }, { once:true });
+  $('#avatarBtn').replaceChildren(img);
+}
+function loadAvatar(){
+  let src = 'assets/plato-profile.jpg';
+  if(storageOK){
+    try{ src = localStorage.getItem(AVATAR_KEY) || src; }catch(e){}
+  }
+  setAvatar(src);
+}
+
+/* =========================================================
+   RULES ENGINE
+   Day states: green | amber (alive, buffer used / partial)
+               purple (automatic relax day after 14 progress days)
+               red (the day it broke) | off (no live chain)
+               pending (today, not logged yet)
+   A finished day with no confirmation is a miss — silence is the slip.
+   ========================================================= */
+let E = null;
+function evaluate(){
+  let min = TODAY;
+  HABITS.forEach(h => Object.keys(S.log[h.id]).forEach(k => { if(k < min) min = k; }));
+  S.start = min;
+
+  const keys = [];
+  for(let i = 0, n = Math.max(0, diffDays(S.start, TODAY)); i <= n; i++) keys.push(addDays(S.start, i));
+
+  const H = {};
+  HABITS.forEach(function(h){
+    const day = {};
+    let streak = 0, best = 0, skips = 0, ambers = 0, rests = 0;
+
+    keys.forEach(function(k){
+      if(h.reset && streak >= h.goal){
+        day[k] = 'purple';
+        streak = 0; skips = 0; ambers = 0; rests++;
+        return;
+      }
+      const v = S.log[h.id][k];
+      if(v === undefined && k === TODAY){ day[k] = 'pending'; return; }   // only today is still open
+
+      if(h.kind === 'strict'){
+        if(v === 2){ streak++; day[k] = 'green'; }
+        else { day[k] = streak > 0 ? 'red' : 'off'; streak = 0; }
+
+      } else if(h.kind === 'grace'){
+        if(v === 2){ streak++; skips = 0; day[k] = 'green'; }
+        else if(streak === 0){ day[k] = 'off'; skips = 0; }
+        else {
+          skips++;
+          if(skips >= 2){ day[k] = 'red'; streak = 0; skips = 0; }
+          else day[k] = 'amber';
+        }
+
+      } else { // eat
+        if(v === 2){ streak++; ambers = 0; day[k] = 'green'; }
+        else if(v === 1){
+          ambers++;
+          if(ambers >= 2){ day[k] = 'red'; streak = 0; ambers = 0; }
+          else { streak++; day[k] = 'amber'; }
+        }
+        else { day[k] = streak > 0 ? 'red' : 'off'; streak = 0; ambers = 0; }
+      }
+      if(streak > best) best = streak;
+    });
+
+    H[h.id] = { day:day, streak:streak, best:best, rests:rests,
+      warned: day[YEST] === 'amber' && streak > 0 };
+  });
+
+  const uday = {};
+  let us = 0, ubest = 0;
+  keys.forEach(function(k){
+    let broken = false, pend = false, allGreen = true, allPurple = true;
+    HABITS.forEach(function(h){
+      const s = H[h.id].day[k];
+      if(s === 'red' || s === 'off') broken = true;
+      else if(s === 'pending'){ pend = true; allGreen = false; }
+      else if(s !== 'green') allGreen = false;
+      if(s !== 'purple') allPurple = false;
+    });
+    if(broken){ uday[k] = 'broken'; us = 0; }
+    else if(pend){ uday[k] = 'pending'; }
+    else { us++; uday[k] = allPurple ? 'purple' : allGreen ? 'perfect' : 'safe'; if(us > ubest) ubest = us; }
+  });
+
+  E = { h:H, ultra:{ day:uday, streak:us, best:ubest } };
+}
+
+/* =========================================================
+   COUNTING
+   ========================================================= */
+function rangeKeys(from, to){
+  const out = [], end = to > TODAY ? TODAY : to;
+  if(from > end) return out;
+  for(let i = 0, n = diffDays(from, end); i <= n; i++) out.push(addDays(from, i));
+  return out;
+}
+function tally(hid, from, to){
+  const t = { green:0, amber:0, red:0, purple:0 };
+  rangeKeys(from, to).forEach(function(k){
+    const s = E.h[hid].day[k];
+    if(s === 'green') t.green++;
+    else if(s === 'amber') t.amber++;
+    else if(s === 'red') t.red++;
+    else if(s === 'purple') t.purple++;
+  });
+  return t;
+}
+function ultraTally(from, to){
+  const t = { perfect:0, safe:0, broken:0, purple:0 };
+  rangeKeys(from, to).forEach(function(k){
+    const s = E.ultra.day[k];
+    if(s === 'perfect') t.perfect++;
+    else if(s === 'safe') t.safe++;
+    else if(s === 'broken') t.broken++;
+    else if(s === 'purple') t.purple++;
+  });
+  return t;
+}
+const monthRange = (y,m) => [ keyOf(new Date(y,m,1)), keyOf(new Date(y,m+1,0)) ];
+const yearRange  = y => [ y+'-01-01', y+'-12-31' ];
+const daysInYear = y => ((y%4===0 && y%100!==0) || y%400===0) ? 366 : 365;
+function weekRange(){
+  const dow = (toDate(TODAY).getDay() + 6) % 7;      // Monday = 0
+  const start = addDays(TODAY, -dow);
+  return [ start, addDays(start, 6) ];
+}
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+let VIEW = (function(){ const d = toDate(TODAY); return { y:d.getFullYear(), m:d.getMonth() }; })();
+let MOTION = null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(){
+  evaluate();
+  $('#app').innerHTML = ultraHTML() + todayHTML() + calsHTML() + totalsHTML() + dataHTML();
+  $('#hstreak').innerHTML = flame(E.ultra.streak, 17) + '<span class="num">'+E.ultra.streak+'</span>';
+  paintClock();
+  paintCloud();
+  MOTION = null;
+}
+
+function ultraHTML(){
+  const u = E.ultra, CY = toDate(TODAY).getFullYear();
+  const y = ultraTally(CY+'-01-01', CY+'-12-31');
+  const purpleGoal = tally('nofap', CY+'-01-01', CY+'-12-31').purple;
+  return '<section class="ultra '+(u.streak===0?'dead':'')+'">'
+    + '<div class="main"><div class="cap">Ultra streak</div>'
+    +   '<div class="big">'+flame(u.streak, 44)+'<b class="num">'+u.streak+'</b>'
+    +   '<span>'+(u.streak===1?'day':'days')+'</span></div></div>'
+    + '<div class="side">'
+    +   '<div><div class="k">Ultra days</div><div class="v num b">'+(y.perfect+y.safe+y.purple)+' <span class="pc">/ '+daysInYear(CY)+'</span></div></div>'
+    +   '<div><div class="k">Purple goal</div><div class="v num p">'+purpleGoal+' <span class="pc">/ '+YEARLY_REST_GOAL+'</span></div></div>'
+    + '</div></section>';
+}
+
+function todayHTML(){
+  const warn = HABITS.filter(h => E.h[h.id].warned && E.h[h.id].day[TODAY] !== 'green').map(h => h.name);
+  const note = warn.length
+    ? '<div class="note">Buffer already used yesterday — '+warn.join(', ')+' must go green today.</div>' : '';
+
+  const cards = HABITS.map(function(h){
+    const hh = E.h[h.id], v = S.log[h.id][TODAY];
+    const isRest = hh.day[TODAY] === 'purple';
+    const progress = isRest ? h.goal : hh.streak;
+    const changed = MOTION && MOTION.type === 'habit' && MOTION.hid === h.id && MOTION.k === TODAY;
+    const cls = (isRest ? 'rest' : v === 2 ? 'done' : v === 1 ? 'part' : '') + (changed ? ' changed' : '');
+    const btns = isRest ? '<div class="rest-day">Relax day</div>' : h.actions.map(function(a){
+      return '<button class="go'+(v===a.v ? ' on'+(a.tone==='amber'?' amber':'') : '')
+        + (changed && MOTION.v === a.v ? ' changed' : '')+'" '
+        + 'data-h="'+h.id+'" data-k="'+TODAY+'" data-v="'+a.v+'">'+a.label+'</button>';
+    }).join('');
+    let hint = '<span class="hint dim">Not logged</span>';
+    if(isRest) hint = '<span class="hint purple">Purple earned — reset tomorrow</span>';
+    else if(v === 2) hint = '<span class="hint good">Day '+hh.streak+' of '+h.goal+' secured</span>';
+    else if(v === 1) hint = '<span class="hint">Partial — streak '+hh.streak+'</span>';
+    else if(hh.warned) hint = '<span class="hint red">Must go green</span>';
+    return '<div class="tcard '+cls+'">'
+      + '<div class="th">'+sym(h.sym)+'<b>'+h.name+'</b>'
+      +   '<span class="n">'+flame(progress, 20, changed, isRest)+'<span class="num">'+progress+'</span><span class="cycle-goal">/'+h.goal+'</span></span></div>'
+      + hint
+      + '<div class="btns">'+btns+'</div></div>';
+  }).join('');
+
+  return '<div class="sec"><h2>Today</h2><div class="rule"></div><span class="aside">'+pretty(TODAY)+'</span></div>'
+    + '<section class="today-grid">'+cards+'</section>' + note;
+}
+
+function calHTML(hid){
+  const lead = (new Date(VIEW.y, VIEW.m, 1).getDay() + 6) % 7;
+  const dim = new Date(VIEW.y, VIEW.m+1, 0).getDate();
+  let c = DW.map(d => '<div class="dw">'+d+'</div>').join('');
+  for(let i=0;i<lead;i++) c += '<div class="cell blank"></div>';
+  const MAP = hid
+    ? { green:'green', amber:'amber', purple:'purple', red:'red', pending:'', off:'', future:'future' }
+    : { perfect:'gold', safe:'blue', purple:'purple', broken:'red', pending:'', off:'', future:'future' };
+  for(let d=1; d<=dim; d++){
+    const k = keyOf(new Date(VIEW.y, VIEW.m, d));
+    const st = k > TODAY ? 'future' : (hid ? (E.h[hid].day[k] || 'off') : (E.ultra.day[k] || 'off'));
+    const ed = hid && editable(k) && st !== 'purple';
+    const changed = MOTION && MOTION.type === 'calendar' && MOTION.hid === hid && MOTION.k === k;
+    c += '<button class="cell '+(MAP[st]||'')+(k===TODAY?' today':'')+(ed?' edit':'')+(changed?' changed':'')+'"'
+       + (ed ? ' data-cyc="'+hid+'" data-k="'+k+'" title="'+pretty(k)+' — click to change"' : ' disabled')
+       + '>'+d+'</button>';
+  }
+  return '<div class="cal">'+c+'</div>';
+}
+
+function calsHTML(){
+  const [mf, mt] = monthRange(VIEW.y, VIEW.m);
+  const [wf, wt] = weekRange();
+  const [yf, yt] = yearRange(VIEW.y);
+  const dim = new Date(VIEW.y, VIEW.m+1, 0).getDate();
+  const mon = MONTHS[VIEW.m].slice(0,3);
+  const atNow = VIEW.y === toDate(TODAY).getFullYear() && VIEW.m === toDate(TODAY).getMonth();
+
+  const cards = HABITS.map(function(h){
+    const M = tally(h.id, mf, mt), W = tally(h.id, wf, wt), Y = tally(h.id, yf, yt);
+    const isRest = E.h[h.id].day[TODAY] === 'purple';
+    const progress = isRest ? h.goal : E.h[h.id].streak;
+    const yearStat = h.reset
+      ? '<span class="rest-count"><b>'+Y.purple+'</b>/'+YEARLY_REST_GOAL+' purple</span>'
+      : '<span><b>'+Y.green+'</b>/'+h.goal+' yr</span>';
+    const changed = MOTION && MOTION.type === 'calendar' && MOTION.hid === h.id;
+    return '<div class="ccard">'
+      + '<div class="ch">'+sym(h.sym)+'<b>'+h.name+'</b>'
+      +   '<span class="n">'+flame(progress, 18, changed, isRest)+'<span class="num">'+progress+'</span><span class="cycle-goal">/'+h.goal+'</span></span></div>'
+      + calHTML(h.id)
+      + '<div class="cstat"><span><b>'+M.green+'</b>/'+dim+' '+mon+'</span>'
+      +   '<span><b>'+W.green+'</b>/7 week</span>'+yearStat+'</div>'
+      + '</div>';
+  }).join('');
+
+  const U = ultraTally(mf, mt);
+  const master = '<div class="ccard master">'
+    + '<div class="ch">'+flame(E.ultra.streak, 18)+'<b>Ultra</b>'
+    +   '<span class="n"><span class="num">'+E.ultra.streak+'</span></span></div>'
+    + calHTML(null)
+    + '<div class="cstat"><span><b>'+U.perfect+'</b> perfect</span>'
+    +   '<span><b>'+U.safe+'</b> safe</span>'
+    +   '<span><b>'+U.purple+'</b> purple</span></div>'
+    + '</div>';
+
+  return '<div class="sec"><h2>Calendars</h2><div class="rule"></div>'
+    + '<div class="mnav"><button data-step="-1" aria-label="Previous month">‹</button>'
+    +   '<b>'+MONTHS[VIEW.m]+' '+VIEW.y+'</b>'
+    +   '<button data-step="1" aria-label="Next month" '+(atNow?'disabled':'')+'>›</button></div></div>'
+    + '<section class="cals">'+cards+master+'</section>'
+    + '<p class="calhelp">Click any past day to change it — once to log it, again to clear. No Fap earns an automatic purple relax day after 14 secured days; the other habits continue toward 365.</p>';
+}
+
+function totalsHTML(){
+  const [mf, mt] = monthRange(VIEW.y, VIEW.m);
+  const [yf, yt] = yearRange(VIEW.y);
+  const elapsed = rangeKeys(mf, mt).length || 1;
+  const mon = MONTHS[VIEW.m];
+
+  const rows = HABITS.map(function(h){
+    const M = tally(h.id, mf, mt), Y = tally(h.id, yf, yt), hh = E.h[h.id];
+    const progress = hh.day[TODAY] === 'purple' ? h.goal : hh.streak;
+    const purple = h.reset ? Y.purple+' <span class="pc">/ '+YEARLY_REST_GOAL+'</span>' : '—';
+    return '<tr><td><span class="nm">'+sym(h.sym)+h.name+'</span></td>'
+      + '<td>'+M.green+' <span class="pc">/ '+elapsed+'</span></td>'
+      + '<td>'+Math.round(M.green/elapsed*100)+'%</td>'
+      + '<td>'+Y.green+' <span class="pc">/ '+daysInYear(VIEW.y)+'</span></td>'
+      + '<td class="purple-total">'+purple+'</td>'
+      + '<td>'+progress+' <span class="pc">/ '+h.goal+'</span></td><td>'+hh.best+'</td></tr>';
+  }).join('');
+
+  const UM = ultraTally(mf, mt), UY = ultraTally(yf, yt);
+  const purpleGoal = tally('nofap', yf, yt).purple;
+  const total = '<tr class="total"><td><span class="nm">'+flame(E.ultra.streak,14)+'Ultra</span></td>'
+    + '<td>'+(UM.perfect+UM.safe+UM.purple)+' <span class="pc">/ '+elapsed+'</span></td>'
+    + '<td>'+Math.round((UM.perfect+UM.safe+UM.purple)/elapsed*100)+'%</td>'
+    + '<td>'+(UY.perfect+UY.safe+UY.purple)+' <span class="pc">/ '+daysInYear(VIEW.y)+'</span></td>'
+    + '<td class="purple-total">'+purpleGoal+' <span class="pc">/ '+YEARLY_REST_GOAL+'</span></td>'
+    + '<td>'+E.ultra.streak+'</td><td>'+E.ultra.best+'</td></tr>';
+
+  return '<div class="sec"><h2>Totals</h2><div class="rule"></div><span class="aside">'+mon+' &amp; '+VIEW.y+'</span></div>'
+    + '<div class="table-scroll"><table><thead><tr><th>Habit</th><th>'+mon.slice(0,3)+'</th><th>%</th><th>'+VIEW.y+'</th><th>Purple</th><th>Cycle</th><th>Best</th></tr></thead>'
+    + '<tbody>'+rows+total+'</tbody></table></div>';
+}
+
+function dataHTML(){
+  return '<details><summary>Data &amp; backup</summary><div class="dwrap">'
+    + '<div><div class="dlbl">Export — copy this somewhere safe</div>'
+    +   '<textarea id="exp" readonly>'+esc(JSON.stringify(S))+'</textarea>'
+    +   '<button class="dbtn" id="copy">Copy</button></div>'
+    + '<div><div class="dlbl">Import — replaces everything stored here</div>'
+    +   '<textarea id="imp" placeholder="Paste an export"></textarea>'
+    +   '<button class="dbtn" id="impgo">Import</button> '
+    +   '<button class="dbtn danger" id="wipe">Erase all</button></div>'
+    + '<div class="cloudbox" id="cloudPanel"><div class="dlbl">Cloud sync — PC + phone</div>'
+    +   '<div class="cloudrow" id="cloudSignedOut"><input class="cloud-input" id="cloudEmail" type="email" autocomplete="email" placeholder="Email">'
+    +     '<input class="cloud-input" id="cloudPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Password">'
+    +     '<button class="dbtn" id="cloudSignin">Sign in</button><button class="dbtn" id="cloudSignup">Create account</button></div>'
+    +   '<div class="cloudrow" id="cloudSignedIn" hidden><span class="cloud-user" id="cloudEmailLabel"></span>'
+    +     '<button class="dbtn" id="cloudSync">Sync now</button><button class="dbtn" id="cloudSignout">Sign out</button></div>'
+    +   '<div class="cloudmsg" id="cloudMessage">Your data remains saved locally until cloud sync is configured.</div></div>'
+    + '</div></details>';
+}
+
+/* =========================================================
+   CLOCK — live Dublin time + countdown to the 4am lock
+   ========================================================= */
+function paintClock(){
+  const n = dublin();
+  $('#clock').textContent = pad(n.h)+':'+pad(n.mi)+':'+pad(n.s);
+  const s = secsToLock(), h = Math.floor(s/3600), m = Math.floor(s%3600/60);
+  const el = $('#lock');
+  el.innerHTML = 'Day locks in <b>' + (h > 0 ? h+'h '+pad(m)+'m' : m+'m '+pad(s%60)+'s') + '</b>';
+  el.className = 'lock' + (s < 7200 ? ' soon' : '');
+  const sv = $('#saved');
+  if(!storageOK){ sv.textContent = 'Not saving'; sv.className = 'saved bad'; }
+  else { sv.textContent = lastSaved ? 'Saved '+pad(lastSaved.h)+':'+pad(lastSaved.mi) : 'Saved'; sv.className = 'saved'; }
+}
+
+/* =========================================================
+   CLOUD SYNC — Supabase Auth + one private state row per user
+   Local storage remains the offline source of truth until sign-in.
+   ========================================================= */
+function cloudSettings(){ return window.ULTRA_CLOUD || {}; }
+function cloudConfigured(){
+  const c = cloudSettings();
+  return !!(c.supabaseUrl && c.supabaseAnonKey && !String(c.supabaseUrl).includes('YOUR_'));
+}
+function paintCloud(){
+  const status = $('#cloudStatus');
+  if(!status) return;
+  let label = 'Local only', tone = '';
+  if(cloudConfigured() && !CLOUD){ label = 'Cloud loading'; tone = 'busy'; }
+  else if(CLOUD && !cloudUser){ label = 'Sign in to sync'; }
+  else if(cloudUser){
+    label = cloudTone === 'busy' ? 'Syncing' : cloudTone === 'bad' ? 'Sync error' : 'Cloud saved';
+    tone = cloudTone === 'busy' ? 'busy' : cloudTone === 'bad' ? 'bad' : 'on';
+  }
+  status.textContent = label;
+  status.className = 'cloud-status'+(tone ? ' '+tone : '');
+
+  const out = $('#cloudSignedOut'), inside = $('#cloudSignedIn'), msg = $('#cloudMessage');
+  if(out) out.hidden = !!cloudUser;
+  if(inside) inside.hidden = !cloudUser;
+  if($('#cloudEmailLabel')) $('#cloudEmailLabel').textContent = cloudUser ? cloudUser.email : '';
+  if(msg){
+    if(cloudMessage) msg.textContent = cloudMessage;
+    else if(!cloudConfigured()) msg.textContent = 'Add your Supabase URL and public anon key to config.js to enable cross-device sync.';
+    else if(!cloudUser) msg.textContent = 'Sign in with the same account on your PC and phone.';
+    else msg.textContent = 'Your latest clicks are stored locally and in the cloud.';
+  }
+}
+function setCloudStatus(message, tone){
+  cloudMessage = message || '';
+  cloudTone = tone || '';
+  paintCloud();
+}
+function queueCloud(job){
+  cloudQueue = cloudQueue.then(job, job);
+  return cloudQueue;
+}
+async function pushCloudNow(){
+  if(!CLOUD || !cloudUser) return;
+  setCloudStatus('Saving your latest changes…', 'busy');
+  const payload = JSON.parse(JSON.stringify(S));
+  const result = await CLOUD.from('ultra_state').upsert({
+    user_id:cloudUser.id,
+    state:payload,
+    updated_at:payload.updatedAt || new Date().toISOString()
+  }, { onConflict:'user_id' });
+  if(result.error) throw result.error;
+  setCloudStatus('Synced across devices.', 'on');
+}
+function scheduleCloudSave(){
+  if(!CLOUD || !cloudUser) return;
+  clearTimeout(cloudSaveT);
+  cloudSaveT = setTimeout(function(){
+    queueCloud(async function(){
+      try{ await pushCloudNow(); }
+      catch(err){ setCloudStatus('Cloud unavailable — changes are safe on this device.', 'bad'); }
+    });
+  }, 450);
+}
+function syncCloud(){
+  if(!CLOUD || !cloudUser) return Promise.resolve();
+  return queueCloud(async function(){
+    try{
+      setCloudStatus('Checking for newer data…', 'busy');
+      const result = await CLOUD.from('ultra_state').select('state,updated_at').eq('user_id', cloudUser.id).maybeSingle();
+      if(result.error) throw result.error;
+      if(!result.data){ await pushCloudNow(); return; }
+
+      const remote = normaliseState(result.data.state);
+      if(!remote) throw new Error('Cloud data is invalid');
+      const remoteTime = Date.parse(result.data.updated_at || remote.updatedAt || 0) || 0;
+      const localTime = Date.parse(S.updatedAt || 0) || 0;
+      if(remoteTime > localTime){
+        remote.updatedAt = result.data.updated_at || remote.updatedAt;
+        S = remote;
+        writeLocal();
+        render();
+        toast('Updated from cloud');
+      } else if(localTime > remoteTime){
+        await pushCloudNow();
+        return;
+      }
+      setCloudStatus('Synced across devices.', 'on');
+    }catch(err){
+      setCloudStatus('Cloud unavailable — changes are safe on this device.', 'bad');
+    }
+  });
+}
+function cloudCredentials(){
+  return {
+    email:($('#cloudEmail') && $('#cloudEmail').value || '').trim(),
+    password:$('#cloudPassword') && $('#cloudPassword').value || ''
+  };
+}
+async function cloudSignIn(create){
+  if(!CLOUD){ setCloudStatus('Cloud sync is not configured yet.', 'bad'); return; }
+  const c = cloudCredentials();
+  if(!c.email || c.password.length < 6){ setCloudStatus('Enter your email and a password of at least 6 characters.', 'bad'); return; }
+  setCloudStatus(create ? 'Creating your account…' : 'Signing in…', 'busy');
+  const result = create
+    ? await CLOUD.auth.signUp({ email:c.email, password:c.password })
+    : await CLOUD.auth.signInWithPassword({ email:c.email, password:c.password });
+  if(result.error){ setCloudStatus(result.error.message, 'bad'); return; }
+  if(create && !result.data.session){
+    setCloudStatus('Account created — confirm the email, then sign in.', 'on');
+    return;
+  }
+  cloudUser = result.data.user || (result.data.session && result.data.session.user);
+  paintCloud();
+  syncCloud();
+}
+async function initCloud(){
+  if(!cloudConfigured()) { paintCloud(); return; }
+  if(!window.supabase || !window.supabase.createClient){
+    setCloudStatus('Cloud library could not load. Local saving still works.', 'bad');
+    return;
+  }
+  const c = cloudSettings();
+  CLOUD = window.supabase.createClient(c.supabaseUrl, c.supabaseAnonKey, {
+    auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+  });
+  const sessionResult = await CLOUD.auth.getSession();
+  cloudUser = sessionResult.data.session && sessionResult.data.session.user;
+  paintCloud();
+  if(cloudUser) syncCloud();
+  CLOUD.auth.onAuthStateChange(function(event, session){
+    cloudUser = session && session.user;
+    cloudMessage = cloudUser ? 'Signed in. Syncing your tracker…' : '';
+    cloudTone = cloudUser ? 'busy' : '';
+    paintCloud();
+    if(cloudUser) setTimeout(syncCloud, 0);
+  });
+}
+
+setInterval(function(){
+  const d = logicalToday();
+  if(d !== TODAY){
+    TODAY = d; YEST = addDays(TODAY, -1);
+    const t = toDate(TODAY);
+    VIEW = { y:t.getFullYear(), m:t.getMonth() };
+    render();
+    toast('New day — ' + pretty(TODAY));
+  } else paintClock();
+}, 1000);
+setInterval(function(){ if(cloudUser && !document.hidden) syncCloud(); }, 60000);
+window.addEventListener('focus', function(){ if(cloudUser) syncCloud(); });
+
+/* =========================================================
+   INPUT
+   ========================================================= */
+let toastT, celebrationT;
+function toast(msg){
+  const el = $('#toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 1900);
+}
+function celebrateUltra(){
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const old = document.querySelector('.ultra-celebration');
+  if(old) old.remove();
+  clearTimeout(celebrationT);
+
+  const layer = document.createElement('div');
+  layer.className = 'ultra-celebration';
+  layer.setAttribute('aria-hidden', 'true');
+
+  const blaze = document.createElement('div');
+  blaze.className = 'ultra-blaze';
+  const size = Math.min(Math.max(window.innerWidth * .3, 180), 360);
+  blaze.innerHTML = flame(E.ultra.streak, Math.round(size), true) + '<b>ULTRA DAY</b>';
+  layer.appendChild(blaze);
+
+  const colours = ['#4EA5FF','#7DF0FF','#E7B93C','#43D15A','#B06CFF','#FFFFFF'];
+  for(let i=0;i<88;i++){
+    const piece = document.createElement('i');
+    piece.className = 'confetti';
+    piece.style.left = (Math.random()*100) + '%';
+    piece.style.setProperty('--x', ((Math.random()-.5)*180) + 'px');
+    piece.style.setProperty('--r', ((Math.random()-.5)*1080) + 'deg');
+    piece.style.setProperty('--d', (1.65+Math.random()*1.15) + 's');
+    piece.style.setProperty('--delay', (Math.random()*.42) + 's');
+    piece.style.setProperty('--c', colours[i % colours.length]);
+    layer.appendChild(piece);
+  }
+
+  document.body.appendChild(layer);
+  celebrationT = setTimeout(() => layer.remove(), 3100);
+}
+function commit(before){
+  save(); render();
+  if(E.ultra.streak > before){ toast('Ultra streak ' + E.ultra.streak); celebrateUltra(); }
+  else if(before > 0 && E.ultra.streak === 0) toast('Ultra streak broken');
+}
+
+document.addEventListener('click', function(e){
+  if(e.target.closest('#avatarBtn')){
+    $('#avatarFile').click(); return;
+  }
+  if(e.target.closest('#cloudStatus')){
+    const details = document.querySelector('details');
+    if(details) details.open = true;
+    paintCloud();
+    setTimeout(function(){ if($('#cloudEmail') && !cloudUser) $('#cloudEmail').focus(); }, 0);
+    return;
+  }
+  if(e.target.id === 'cloudSignin'){ cloudSignIn(false); return; }
+  if(e.target.id === 'cloudSignup'){ cloudSignIn(true); return; }
+  if(e.target.id === 'cloudSync'){ syncCloud(); return; }
+  if(e.target.id === 'cloudSignout'){
+    if(CLOUD) CLOUD.auth.signOut().then(function(){
+      cloudUser = null; cloudMessage = 'Signed out. This device will continue saving locally.'; cloudTone = '';
+      paintCloud();
+    });
+    return;
+  }
+
+  const go = e.target.closest('[data-h]');
+  if(go){
+    const before = E.ultra.streak, hid = go.dataset.h, k = go.dataset.k, v = +go.dataset.v;
+    MOTION = { type:'habit', hid:hid, k:k, v:v };
+    if(S.log[hid][k] === v) delete S.log[hid][k]; else S.log[hid][k] = v;
+    commit(before); return;
+  }
+
+  const cyc = e.target.closest('[data-cyc]');
+  if(cyc){                                   // click a day to step through its states
+    const before = E.ultra.streak;
+    const h = HABITS.find(x => x.id === cyc.dataset.cyc), k = cyc.dataset.k;
+    if(!editable(k)) return;
+    const seq = h.actions.map(a => a.v).concat([undefined]);
+    const next = seq[(seq.indexOf(S.log[h.id][k]) + 1) % seq.length];
+    MOTION = { type:'calendar', hid:h.id, k:k };
+    if(next === undefined) delete S.log[h.id][k]; else S.log[h.id][k] = next;
+    commit(before); return;
+  }
+
+  const st = e.target.closest('[data-step]');
+  if(st){
+    VIEW.m += +st.dataset.step;
+    if(VIEW.m < 0){ VIEW.m = 11; VIEW.y--; }
+    if(VIEW.m > 11){ VIEW.m = 0; VIEW.y++; }
+    render(); return;
+  }
+
+  if(e.target.id === 'copy'){
+    const ta = $('#exp'); ta.select();
+    (navigator.clipboard ? navigator.clipboard.writeText(ta.value) : Promise.reject())
+      .then(() => toast('Copied')).catch(() => { document.execCommand('copy'); toast('Copied'); });
+    return;
+  }
+  if(e.target.id === 'impgo'){
+    try{
+      const p = normaliseState(JSON.parse($('#imp').value));
+      if(!p) throw 0;
+      S = p; save(); render(); toast('Imported');
+    }catch(err){ toast('Not a valid export'); }
+    return;
+  }
+  if(e.target.id === 'wipe'){
+    if(confirm('Erase every logged day? If cloud sync is active, this erases the synced copy too.')){
+      S = blank(); save(); render(); toast('Erased');
+    }
+  }
+});
+
+$('#avatarFile').addEventListener('change', function(){
+  const file = this.files && this.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(){
+    const src = String(reader.result);
+    setAvatar(src);
+    if(storageOK){
+      try{ localStorage.setItem(AVATAR_KEY, src); toast('Profile photo updated'); }
+      catch(e){ toast('Photo changed for this visit'); }
+    }
+  };
+  reader.onerror = function(){ toast('Could not load that photo'); };
+  reader.readAsDataURL(file);
+  this.value = '';
+});
+
+S = load();
+loadAvatar();
+render();
+initCloud();
+if(!storageOK) toast('This browser blocks storage — nothing will be saved');
+})();
+</script>
+</body>
+</html>
