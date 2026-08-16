@@ -126,7 +126,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .note{margin-top:12px;font-size:12.5px;color:var(--amber);font-weight:600}
 
 /* ---------- today ---------- */
-.today-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+.today-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:11px}
 /* the aspect-ratio day cells carry a large automatic minimum size, so every
    track here is minmax(0,1fr) and every grid child min-width:0 — otherwise
    the calendars push their cards wider than the page */
@@ -137,6 +137,9 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .tcard.done{background:rgba(67,209,90,.055);border-color:rgba(67,209,90,.32)}
 .tcard.part{background:rgba(240,176,60,.05);border-color:rgba(240,176,60,.32)}
 .tcard.rest{background:rgba(176,108,255,.07);border-color:rgba(176,108,255,.42)}
+.tcard.locked{background:linear-gradient(145deg,rgba(176,108,255,.055),rgba(17,19,25,.96));
+  border-color:rgba(176,108,255,.24);border-style:dashed}
+.tcard.locked .flame{opacity:.38;filter:none}
 .th{display:flex;align-items:center;gap:8px}
 .th b{font-size:13.5px;font-weight:600;letter-spacing:-.005em;flex:1;min-width:0}
 .th .n{display:flex;align-items:center;gap:5px;font-size:17px;font-weight:700;letter-spacing:-.02em;flex:none}
@@ -149,6 +152,8 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .go:hover{background:#3A8FE6}
 .go.on{background:var(--green);color:#04240B}
 .go.on.amber{background:var(--amber);color:#301F02}
+.go.purple,.go.on.purple{background:var(--purple);color:#180B25}
+.go.purple:hover,.go.on.purple:hover{background:#BD84FF;filter:none}
 .go.on:hover{filter:brightness(1.07)}
 .go.changed{animation:button-confirm .42s cubic-bezier(.2,.9,.25,1.35)}
 .hint{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
@@ -156,9 +161,13 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .hint.dim{color:var(--dim2)}
 .hint.good{color:var(--green)}
 .hint.purple{color:var(--purple)}
+.hint.launch{color:#A17BCB}
 .rest-day{padding:10px 8px;border-radius:8px;border:1px solid rgba(176,108,255,.34);
   background:rgba(176,108,255,.12);color:#D9B8FF;text-align:center;font-size:10.5px;font-weight:700;
   letter-spacing:.09em;text-transform:uppercase}
+.go.launch-lock{border-color:rgba(176,108,255,.24);background:rgba(176,108,255,.09);color:#BDA1D9;
+  cursor:not-allowed;letter-spacing:.07em;line-height:1.35}
+.go.launch-lock b{display:block;color:#E0C4FF;font-size:11px;font-variant-numeric:tabular-nums;letter-spacing:.04em}
 
 /* ---------- month nav ---------- */
 .mnav{display:flex;align-items:center;gap:10px;flex:none}
@@ -190,6 +199,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .cell.blue{background:rgba(78,165,255,.18);border-color:rgba(78,165,255,.42);color:#B4D7FF}
 .cell.purple{background:rgba(176,108,255,.2);border-color:rgba(176,108,255,.55);color:#E0C4FF;
   box-shadow:inset 0 0 12px rgba(176,108,255,.12)}
+.cell.locked{background:rgba(176,108,255,.045);border-color:rgba(176,108,255,.1);color:#685779;opacity:.58}
 .cell.today{box-shadow:0 0 0 1.5px var(--blue)}
 .cell.future{opacity:.25}
 .cell.edit{cursor:pointer}
@@ -199,6 +209,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
   font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dim2)}
 .cstat b{color:var(--txt);font-weight:700;font-variant-numeric:tabular-nums}
 .cstat .rest-count b{color:var(--purple)}
+.cstat .launch-stat b{color:#B792DB}
 .calhelp{margin-top:12px;font-size:11px;color:var(--dim2)}
 
 /* ---------- totals ---------- */
@@ -335,16 +346,19 @@ textarea{width:100%;height:110px;border-radius:8px;background:#0C0E14;border:1px
    CONFIG
    ========================================================= */
 const TZ = 'Europe/Dublin';
-const ROLLOVER = 4;                 // the day flips at 04:00 Dublin
 const KEY = 'ultra.streaks.v1';
 const AVATAR_KEY = 'ultra.avatar.v1';
 const YEARLY_REST_GOAL = 20;
+const SLEEP_LAUNCH = '2026-08-28';
+const ROLLOVER_BEFORE_LAUNCH = 4;
+const ROLLOVER_AFTER_LAUNCH = 0;
 
 // kind: strict = no buffer | grace = one missed day allowed | eat = graded
 const HABITS = [
   { id:'eat',   name:'Eat Well',   sym:'fork',  kind:'eat', goal:365,
     actions:[{v:1,label:'Protein',tone:'amber'},{v:2,label:'Protein + kcal'}] },
   { id:'read',  name:'Reading',    sym:'book',  kind:'grace',  goal:365, actions:[{v:2,label:'Done'}] },
+  { id:'sleep', name:'Sleep Now!', sym:'moon',  kind:'grace',  goal:365, start:SLEEP_LAUNCH, actions:[{v:2,label:'Done',tone:'purple'}] },
   { id:'reels', name:'No Reels',   sym:'phone', kind:'strict', goal:365, actions:[{v:2,label:'Done'}] },
   { id:'nofap', name:'No Fap',     sym:'lock',  kind:'strict', goal:14, reset:true, actions:[{v:2,label:'Done'}] },
   { id:'room',  name:'Room Clean', sym:'broom', kind:'grace',  goal:365, actions:[{v:2,label:'Done'}] },
@@ -356,7 +370,8 @@ const SYM = {
   lock: '<rect x="4.6" y="10.4" width="14.8" height="10.6" rx="2.2"/><path d="M8.1 10.4V7.6a3.9 3.9 0 0 1 7.8 0v2.8"/>',
   broom:'<path d="M12 3v9"/><path d="M8 12h8l1.6 8H6.4z"/><path d="M12 12.6v7"/>',
   fork: '<path d="M5.2 3v5.1a2.2 2.2 0 0 0 4.4 0V3"/><path d="M7.4 10.3V21"/><path d="M16.6 3v18"/><path d="M16.6 3c2.3 1.3 2.9 4 2.3 6.5-.3 1.2-1.2 1.9-2.3 1.9"/>',
-  book: '<path d="M12 6.6v13"/><path d="M12 6.6C10.1 5.1 7.4 4.6 3.8 4.9v12.6c3.6-.3 6.3.2 8.2 1.7"/><path d="M12 6.6c1.9-1.5 4.6-2 8.2-1.7v12.6c-3.6-.3-6.3.2-8.2 1.7"/>'
+  book: '<path d="M12 6.6v13"/><path d="M12 6.6C10.1 5.1 7.4 4.6 3.8 4.9v12.6c3.6-.3 6.3.2 8.2 1.7"/><path d="M12 6.6c1.9-1.5 4.6-2 8.2-1.7v12.6c-3.6-.3-6.3.2-8.2 1.7"/>',
+  moon: '<path d="M20.2 15.2A8.7 8.7 0 0 1 8.8 3.8 8.7 8.7 0 1 0 20.2 15.2z"/>'
 };
 function sym(name){ return '<svg class="sym" viewBox="0 0 24 24" aria-hidden="true">'+SYM[name]+'</svg>'; }
 
@@ -382,8 +397,8 @@ const pad = n => String(n).padStart(2,'0');
 
 /* =========================================================
    DUBLIN TIME
-   Every date here is a Dublin calendar day, shifted so the day
-   ends at 04:00 — 2am on Sunday still counts as Saturday.
+   Every date here is a Dublin calendar day. The tracker resets
+   at 04:00 until Sleep Now! launches, then at midnight.
    ========================================================= */
 const DTF = new Intl.DateTimeFormat('en-GB', {
   timeZone:TZ, year:'numeric', month:'2-digit', day:'2-digit',
@@ -398,15 +413,31 @@ function toDate(k){ const p = k.split('-').map(Number); return new Date(p[0], p[
 function keyOf(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function addDays(k, n){ const d = toDate(k); d.setDate(d.getDate()+n); return keyOf(d); }
 function diffDays(a, b){ return Math.round((toDate(b) - toDate(a)) / 86400000); }
+function calendarKey(n){ return n.y+'-'+pad(n.mo)+'-'+pad(n.d); }
+function rolloverFor(n){
+  return calendarKey(n) >= SLEEP_LAUNCH ? ROLLOVER_AFTER_LAUNCH : ROLLOVER_BEFORE_LAUNCH;
+}
 function logicalToday(){
   const n = dublin();
-  const k = n.y+'-'+pad(n.mo)+'-'+pad(n.d);
-  return n.h < ROLLOVER ? addDays(k, -1) : k;
+  const k = calendarKey(n), rollover = rolloverFor(n);
+  return n.h < rollover ? addDays(k, -1) : k;
 }
 function secsToLock(){
   const n = dublin();
-  const cur = n.h*3600 + n.mi*60 + n.s, target = ROLLOVER*3600;
-  return cur < target ? target - cur : 86400 + target - cur;
+  const cur = n.h*3600 + n.mi*60 + n.s, target = rolloverFor(n)*3600;
+  let seconds = cur < target ? target - cur : 86400 + target - cur;
+  if(calendarKey(n) < SLEEP_LAUNCH) seconds = Math.min(seconds, secsUntil(SLEEP_LAUNCH));
+  return seconds;
+}
+function secsUntil(k){
+  const n = dublin();
+  const nowKey = n.y+'-'+pad(n.mo)+'-'+pad(n.d);
+  return Math.max(0, diffDays(nowKey, k)*86400 - (n.h*3600+n.mi*60+n.s));
+}
+function launchCountdown(){
+  const s = secsUntil(SLEEP_LAUNCH), d = Math.floor(s/86400), h = Math.floor(s%86400/3600);
+  const m = Math.floor(s%3600/60), sec = s%60;
+  return d+'d '+pad(h)+'h '+pad(m)+'m '+pad(sec)+'s';
 }
 function pretty(k){
   const d = toDate(k);
@@ -497,6 +528,7 @@ function evaluate(){
     let streak = 0, best = 0, skips = 0, ambers = 0, rests = 0;
 
     keys.forEach(function(k){
+      if(h.start && k < h.start){ day[k] = 'locked'; return; }
       if(h.reset && streak >= h.goal){
         day[k] = 'purple';
         streak = 0; skips = 0; ambers = 0; rests++;
@@ -511,7 +543,6 @@ function evaluate(){
 
       } else if(h.kind === 'grace'){
         if(v === 2){ streak++; skips = 0; day[k] = 'green'; }
-        else if(streak === 0){ day[k] = 'off'; skips = 0; }
         else {
           skips++;
           if(skips >= 2){ day[k] = 'red'; streak = 0; skips = 0; }
@@ -531,21 +562,24 @@ function evaluate(){
     });
 
     H[h.id] = { day:day, streak:streak, best:best, rests:rests,
-      warned: day[YEST] === 'amber' && streak > 0 };
+      warned: day[YEST] === 'amber' };
   });
 
   const uday = {};
   let us = 0, ubest = 0;
   keys.forEach(function(k){
-    let broken = false, pend = false, allGreen = true, allPurple = true;
+    let active = 0, broken = false, pend = false, allGreen = true, allPurple = true;
     HABITS.forEach(function(h){
       const s = H[h.id].day[k];
+      if(s === 'locked') return;
+      active++;
       if(s === 'red' || s === 'off') broken = true;
       else if(s === 'pending'){ pend = true; allGreen = false; }
       else if(s !== 'green') allGreen = false;
       if(s !== 'purple') allPurple = false;
     });
-    if(broken){ uday[k] = 'broken'; us = 0; }
+    if(active === 0){ uday[k] = 'off'; us = 0; }
+    else if(broken){ uday[k] = 'broken'; us = 0; }
     else if(pend){ uday[k] = 'pending'; }
     else { us++; uday[k] = allPurple ? 'purple' : allGreen ? 'perfect' : 'safe'; if(us > ubest) ubest = us; }
   });
@@ -632,16 +666,20 @@ function todayHTML(){
   const cards = HABITS.map(function(h){
     const hh = E.h[h.id], v = S.log[h.id][TODAY];
     const isRest = hh.day[TODAY] === 'purple';
+    const isLocked = hh.day[TODAY] === 'locked';
     const progress = isRest ? h.goal : hh.streak;
     const changed = MOTION && MOTION.type === 'habit' && MOTION.hid === h.id && MOTION.k === TODAY;
-    const cls = (isRest ? 'rest' : v === 2 ? 'done' : v === 1 ? 'part' : '') + (changed ? ' changed' : '');
-    const btns = isRest ? '<div class="rest-day">Relax day</div>' : h.actions.map(function(a){
-      return '<button class="go'+(v===a.v ? ' on'+(a.tone==='amber'?' amber':'') : '')
+    const cls = (isLocked ? 'locked' : isRest ? 'rest' : v === 2 ? 'done' : v === 1 ? 'part' : '') + (changed ? ' changed' : '');
+    const btns = isLocked
+      ? '<button class="go launch-lock" disabled>Unlocks in<b class="num" id="sleepCountdown">'+launchCountdown()+'</b></button>'
+      : isRest ? '<div class="rest-day">Relax day</div>' : h.actions.map(function(a){
+      return '<button class="go'+(a.tone==='purple'?' purple':'')+(v===a.v ? ' on'+(a.tone==='amber'?' amber':'') : '')
         + (changed && MOTION.v === a.v ? ' changed' : '')+'" '
         + 'data-h="'+h.id+'" data-k="'+TODAY+'" data-v="'+a.v+'">'+a.label+'</button>';
     }).join('');
     let hint = '<span class="hint dim">Not logged</span>';
-    if(isRest) hint = '<span class="hint purple">Purple earned — reset tomorrow</span>';
+    if(isLocked) hint = '<span class="hint launch">Arrives 28 August 2026</span>';
+    else if(isRest) hint = '<span class="hint purple">Purple earned — reset tomorrow</span>';
     else if(v === 2) hint = '<span class="hint good">Day '+hh.streak+' of '+h.goal+' secured</span>';
     else if(v === 1) hint = '<span class="hint">Partial — streak '+hh.streak+'</span>';
     else if(hh.warned) hint = '<span class="hint red">Must go green</span>';
@@ -662,12 +700,12 @@ function calHTML(hid){
   let c = DW.map(d => '<div class="dw">'+d+'</div>').join('');
   for(let i=0;i<lead;i++) c += '<div class="cell blank"></div>';
   const MAP = hid
-    ? { green:'green', amber:'amber', purple:'purple', red:'red', pending:'', off:'', future:'future' }
+    ? { green:'green', amber:'amber', purple:'purple', locked:'locked', red:'red', pending:'', off:'', future:'future' }
     : { perfect:'gold', safe:'blue', purple:'purple', broken:'red', pending:'', off:'', future:'future' };
   for(let d=1; d<=dim; d++){
     const k = keyOf(new Date(VIEW.y, VIEW.m, d));
     const st = k > TODAY ? 'future' : (hid ? (E.h[hid].day[k] || 'off') : (E.ultra.day[k] || 'off'));
-    const ed = hid && editable(k) && st !== 'purple';
+    const ed = hid && editable(k) && st !== 'purple' && st !== 'locked';
     const changed = MOTION && MOTION.type === 'calendar' && MOTION.hid === hid && MOTION.k === k;
     c += '<button class="cell '+(MAP[st]||'')+(k===TODAY?' today':'')+(ed?' edit':'')+(changed?' changed':'')+'"'
        + (ed ? ' data-cyc="'+hid+'" data-k="'+k+'" title="'+pretty(k)+' — click to change"' : ' disabled')
@@ -687,8 +725,11 @@ function calsHTML(){
   const cards = HABITS.map(function(h){
     const M = tally(h.id, mf, mt), W = tally(h.id, wf, wt), Y = tally(h.id, yf, yt);
     const isRest = E.h[h.id].day[TODAY] === 'purple';
+    const isLocked = E.h[h.id].day[TODAY] === 'locked';
     const progress = isRest ? h.goal : E.h[h.id].streak;
-    const yearStat = h.reset
+    const yearStat = isLocked
+      ? '<span class="launch-stat"><b>28 Aug</b> start</span>'
+      : h.reset
       ? '<span class="rest-count"><b>'+Y.purple+'</b>/'+YEARLY_REST_GOAL+' purple</span>'
       : '<span><b>'+Y.green+'</b>/'+h.goal+' yr</span>';
     const changed = MOTION && MOTION.type === 'calendar' && MOTION.hid === h.id;
@@ -716,7 +757,7 @@ function calsHTML(){
     +   '<b>'+MONTHS[VIEW.m]+' '+VIEW.y+'</b>'
     +   '<button data-step="1" aria-label="Next month" '+(atNow?'disabled':'')+'>›</button></div></div>'
     + '<section class="cals">'+cards+master+'</section>'
-    + '<p class="calhelp">Click any past day to change it — once to log it, again to clear. No Fap earns an automatic purple relax day after 14 secured days; the other habits continue toward 365.</p>';
+    + '<p class="calhelp">Click any past day to change it — once to log it, again to clear. Sleep Now! unlocks on 28 August and allows one missed day; a second consecutive miss breaks Ultra.</p>';
 }
 
 function totalsHTML(){
@@ -771,7 +812,7 @@ function dataHTML(){
 }
 
 /* =========================================================
-   CLOCK — live Dublin time + countdown to the 4am lock
+   CLOCK — live Dublin time + countdown to the midnight lock
    ========================================================= */
 function paintClock(){
   const n = dublin();
@@ -780,6 +821,8 @@ function paintClock(){
   const el = $('#lock');
   el.innerHTML = 'Day locks in <b>' + (h > 0 ? h+'h '+pad(m)+'m' : m+'m '+pad(s%60)+'s') + '</b>';
   el.className = 'lock' + (s < 7200 ? ' soon' : '');
+  const launch = $('#sleepCountdown');
+  if(launch) launch.textContent = launchCountdown();
   const sv = $('#saved');
   if(!storageOK){ sv.textContent = 'Not saving'; sv.className = 'saved bad'; }
   else { sv.textContent = lastSaved ? 'Saved '+pad(lastSaved.h)+':'+pad(lastSaved.mi) : 'Saved'; sv.className = 'saved'; }
