@@ -359,7 +359,7 @@ const HABITS = [
     actions:[{v:1,label:'Protein',tone:'amber'},{v:2,label:'Protein + kcal'}] },
   { id:'read',  name:'Reading',    sym:'book',  kind:'grace',  goal:365, actions:[{v:2,label:'Done'}] },
   { id:'reels', name:'No Reels',   sym:'phone', kind:'strict', goal:365, actions:[{v:2,label:'Done'}] },
-  { id:'nofap', name:'No Fap',     sym:'lock',  kind:'strict', goal:14, reset:true, actions:[{v:2,label:'Done'}] },
+  { id:'nofap', name:'No Карты + No Погода', displayName:'No Карты<br>+<br>No Погода', sym:'lock', kind:'strict', goal:14, reset:true, actions:[{v:2,label:'Done'}] },
   { id:'room',  name:'Room Clean', sym:'broom', kind:'grace',  goal:365, actions:[{v:2,label:'Done'}] },
   { id:'sleep', name:'Sleep Now!', sym:'moon',  kind:'grace',  goal:365, start:SLEEP_LAUNCH, actions:[{v:2,label:'Done',tone:'purple'}] },
 ];
@@ -684,7 +684,7 @@ function todayHTML(){
     else if(v === 1) hint = '<span class="hint">Partial — streak '+hh.streak+'</span>';
     else if(hh.warned) hint = '<span class="hint red">Must go green</span>';
     return '<div class="tcard '+cls+'">'
-      + '<div class="th">'+sym(h.sym)+'<b>'+h.name+'</b>'
+      + '<div class="th">'+sym(h.sym)+'<b>'+(h.displayName || h.name)+'</b>'
       +   '<span class="n">'+flame(progress, 20, changed, isRest)+'<span class="num">'+progress+'</span><span class="cycle-goal">/'+h.goal+'</span></span></div>'
       + hint
       + '<div class="btns">'+btns+'</div></div>';
@@ -734,7 +734,7 @@ function calsHTML(){
       : '<span><b>'+Y.green+'</b>/'+h.goal+' yr</span>';
     const changed = MOTION && MOTION.type === 'calendar' && MOTION.hid === h.id;
     return '<div class="ccard">'
-      + '<div class="ch">'+sym(h.sym)+'<b>'+h.name+'</b>'
+      + '<div class="ch">'+sym(h.sym)+'<b>'+(h.displayName || h.name)+'</b>'
       +   '<span class="n">'+flame(progress, 18, changed, isRest)+'<span class="num">'+progress+'</span><span class="cycle-goal">/'+h.goal+'</span></span></div>'
       + calHTML(h.id)
       + '<div class="cstat"><span><b>'+M.green+'</b>/'+dim+' '+mon+'</span>'
