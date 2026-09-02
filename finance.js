@@ -48,7 +48,9 @@ let entryDraft = {amount:'',currency:'EUR',accountId:'',categoryId:'',sourceId:'
 let cashChangePrompt = null;
 let quickPanel = '';
 let wealthTab = 'networth';
-let wealthUnlocked = true;
+let financeUnlocked = {budget:false,wealth:false};
+let financePinMode = {budget:'',wealth:''};
+let financePinMessage = {budget:'',wealth:''};
 let analyticsMonth = todayKey().slice(0,7);
 let analyticsDay = todayKey();
 let historicalMonth = '2025-11';
@@ -83,6 +85,7 @@ function emptyFinance(){
     categories:[],
     accounts:[], sources:[], transactions:[], assets:[], passives:[], recurring:[], planned:[], inventory:[],
     budget:{version:4,categories:DEFAULT_BUDGET_CATEGORIES.map(item=>Object.assign({},item)),monthlyAssignments:{},weeklyPlans:{},monthlyBudgets:{},deletedCategoryIds:[]},
+    security:{version:1,budgetPin:null,wealthPin:null},
     historicalAnalytics:JSON.parse(JSON.stringify(HISTORICAL_SPENDING_2025)),
     updatedAt:null
   };
@@ -129,6 +132,13 @@ function normaliseFinance(value){
     if(!value.budget.deletedCategoryIds.includes(item.id)&&!value.budget.categories.some(category=>category.id===item.id)) value.budget.categories.push(Object.assign({},item));
     if(!value.categories.some(category=>category.id===item.categoryId)) value.categories.push({id:item.categoryId,name:item.name,type:'expense'});
   });
+  if(!value.security||typeof value.security!=='object') value.security=base.security;
+  value.security.version=1;
+  ['budgetPin','wealthPin'].forEach(key=>{
+    const pin=value.security[key];
+    value.security[key]=pin&&typeof pin==='object'&&typeof pin.salt==='string'&&typeof pin.hash==='string'
+      ? {algorithm:pin.algorithm||'PBKDF2-SHA256',iterations:Math.max(100000,Number(pin.iterations||210000)),salt:pin.salt,hash:pin.hash} : null;
+  });
   if(!value.historicalAnalytics||!Array.isArray(value.historicalAnalytics.months)||!Array.isArray(value.historicalAnalytics.groups)){
     value.historicalAnalytics=JSON.parse(JSON.stringify(HISTORICAL_SPENDING_2025));
   }else value.historicalAnalytics.version=2;
@@ -137,7 +147,7 @@ function normaliseFinance(value){
 }
 
 function setProduct(next){
-  lockWealth();
+  lockFinanceSections();
   product = next === 'finance' ? 'finance' : 'habits';
   document.body.classList.toggle('finance-mode', product === 'finance');
   habitsApp.hidden = product !== 'habits';
@@ -165,13 +175,15 @@ window.addEventListener('hashchange', function(){
   } else if(product === 'finance') setProduct('habits');
 });
 
-function lockWealth(){
-  wealthUnlocked=true;
+function lockFinanceSections(){
+  financeUnlocked={budget:false,wealth:false};
+  financePinMode={budget:'',wealth:''};
+  financePinMessage={budget:'',wealth:''};
 }
 
 function selectFinanceRoute(requested){
   // Unlocking lasts only for this visit, never across main-page navigation.
-  lockWealth();
+  lockFinanceSections();
   if(['networth','assets','passives'].includes(requested)){ wealthTab=requested; page='wealth'; return; }
   if(pageMeta[requested]) page=requested;
 }
@@ -180,7 +192,7 @@ window.addEventListener('ultra-auth', function(event){
   if(LOCAL_PREVIEW) return;
   client = event.detail && event.detail.client || window.ULTRA_SUPABASE || client;
   user = event.detail && event.detail.user || null;
-  if(!user){ F = null; loading = false; lockWealth(); render(); return; }
+  if(!user){ F = null; loading = false; lockFinanceSections(); render(); return; }
   if(F) refreshFinance(); else loadFinance();
 });
 
@@ -563,6 +575,72 @@ function shell(content){
     +content+'<div class="finance-private">'+privacy+'</div></section></div>';
 }
 
+function pinRecord(section){
+  return F&&F.security&&F.security[section+'Pin']||null;
+}
+
+function renderFinancePinGate(section){
+  const label=section==='budget'?'Budget':'Wealth';
+  const configured=!!pinRecord(section), changing=financePinMode[section]==='change';
+  const action=!configured?'create':changing?'change':'unlock';
+  const title=action==='create'?'Create your '+label+' PIN':action==='change'?'Change your '+label+' PIN':'Unlock '+label;
+  const button=action==='create'?'Create PIN':action==='change'?'Save new PIN':'Unlock';
+  const confirm=action==='unlock'?'':'<input class="f-input" name="confirmPin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" autocomplete="new-password" placeholder="Repeat PIN" aria-label="Repeat '+label+' PIN" required>';
+  return '<section class="finance-section-lock"><div class="finance-pin-mark" aria-hidden="true">⌁</div><div class="f-kicker">'+esc(label)+' privacy</div><h2>'+esc(title)+'</h2>'
+    +'<p>Use a separate 4–8 digit screen PIN. It is salted and hashed before it is saved; the PIN itself is never stored.</p>'
+    +'<form class="finance-pin-form" data-finance-pin-form="'+section+'" data-pin-action="'+action+'"><input class="f-input" name="pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="8" autocomplete="'+(action==='unlock'?'current-password':'new-password')+'" placeholder="'+(action==='unlock'?'PIN':'New PIN')+'" aria-label="'+esc(label)+' PIN" required>'+confirm+'<button class="f-submit">'+button+'</button></form>'
+    +(changing?'<button class="finance-pin-cancel" type="button" data-cancel-finance-pin="'+section+'">Cancel</button>':'')
+    +'<div class="finance-pin-message" role="status">'+esc(financePinMessage[section])+'</div><small class="finance-pin-note">Your Supabase sign-in remains the main protection for your private data.</small></section>';
+}
+
+function renderProtectedFinance(section,renderer){
+  const configured=!!pinRecord(section);
+  if(!configured||!financeUnlocked[section]||financePinMode[section]==='change') return renderFinancePinGate(section);
+  const label=section==='budget'?'Budget':'Wealth';
+  return '<div class="finance-security-toolbar"><span>'+label+' unlocked for this visit</span><div><button type="button" data-change-finance-pin="'+section+'">Change PIN</button><button type="button" data-lock-finance-section="'+section+'">Lock</button></div></div>'+renderer();
+}
+
+function pinSalt(){
+  const bytes=new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  return Array.from(bytes,byte=>byte.toString(16).padStart(2,'0')).join('');
+}
+
+async function hashPin(pin,salt,iterations){
+  if(!window.crypto||!window.crypto.subtle) throw new Error('Secure PIN hashing is not available in this browser.');
+  const encoder=new TextEncoder();
+  const key=await window.crypto.subtle.importKey('raw',encoder.encode(pin),'PBKDF2',false,['deriveBits']);
+  const bits=await window.crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:encoder.encode(salt),iterations:Math.max(100000,Number(iterations||210000))},key,256);
+  return Array.from(new Uint8Array(bits),byte=>byte.toString(16).padStart(2,'0')).join('');
+}
+
+async function handleFinancePin(form){
+  const section=form.dataset.financePinForm, action=form.dataset.pinAction;
+  if(!['budget','wealth'].includes(section)) return;
+  const data=new FormData(form), pin=String(data.get('pin')||'');
+  if(!/^\d{4,8}$/.test(pin)){ financePinMessage[section]='Use 4–8 numbers only.'; render(); return; }
+  try{
+    if(action==='unlock'){
+      const record=pinRecord(section);
+      if(!record||await hashPin(pin,record.salt,record.iterations)!==record.hash){ financePinMessage[section]='That PIN is not correct.'; render(); return; }
+      financeUnlocked[section]=true;
+      financePinMessage[section]='';
+      render();
+      return;
+    }
+    if(pin!==String(data.get('confirmPin')||'')){ financePinMessage[section]='The two PINs do not match.'; render(); return; }
+    const salt=pinSalt();
+    const iterations=210000;
+    F.security[section+'Pin']={algorithm:'PBKDF2-SHA256',iterations:iterations,salt:salt,hash:await hashPin(pin,salt,iterations)};
+    financeUnlocked[section]=true;
+    financePinMode[section]='';
+    financePinMessage[section]='';
+    scheduleSave();
+    render();
+    toast((section==='budget'?'Budget':'Wealth')+' PIN saved');
+  }catch(error){ financePinMessage[section]=error&&error.message||'Could not save this PIN.'; render(); }
+}
+
 function render(){
   if(product !== 'finance') return;
   if(loading){ app.innerHTML='<div class="finance-loading">Loading your private finance data…</div>'; return; }
@@ -577,7 +655,7 @@ function render(){
     return;
   }
   if(!F){ app.innerHTML='<div class="finance-loading">Preparing myFinances…</div>'; return; }
-  const pages={entry:renderEntry,home:renderHome,wealth:renderWealth,networth:renderNetWorth,assets:renderAssets,passives:renderPassives,planning:renderPlanning,analytics:renderAnalytics,other:renderOther};
+  const pages={entry:renderEntry,home:()=>renderProtectedFinance('budget',renderHome),wealth:()=>renderProtectedFinance('wealth',renderWealth),networth:()=>renderProtectedFinance('wealth',renderNetWorth),assets:()=>renderProtectedFinance('wealth',renderAssets),passives:()=>renderProtectedFinance('wealth',renderPassives),planning:renderPlanning,analytics:renderAnalytics,other:renderOther};
   app.innerHTML=shell(pages[page]());
   renderSync();
 }
@@ -1005,6 +1083,12 @@ function rateCard(item){
 app.addEventListener('click', function(event){
   const nav=event.target.closest('[data-fin-page]');
   if(nav){ selectFinanceRoute(nav.dataset.finPage); history.replaceState(null,'','#finance/'+page); quickPanel=''; entryModal=''; render(); return; }
+  const lockSection=event.target.closest('[data-lock-finance-section]');
+  if(lockSection){ const section=lockSection.dataset.lockFinanceSection; financeUnlocked[section]=false; financePinMessage[section]=''; render(); return; }
+  const changePin=event.target.closest('[data-change-finance-pin]');
+  if(changePin){ const section=changePin.dataset.changeFinancePin; financePinMode[section]='change'; financePinMessage[section]=''; render(); return; }
+  const cancelPin=event.target.closest('[data-cancel-finance-pin]');
+  if(cancelPin){ const section=cancelPin.dataset.cancelFinancePin; financePinMode[section]=''; financePinMessage[section]=''; render(); return; }
   const budgetView=event.target.closest('[data-budget-view]');
   if(budgetView){ budgetMode=budgetView.dataset.budgetView==='week'?'week':'month'; render(); return; }
   const deleteEnvelope=event.target.closest('[data-delete-budget-envelope]');
@@ -1123,6 +1207,7 @@ document.addEventListener('keydown',function(event){
 app.addEventListener('submit', function(event){
   event.preventDefault();
   if(event.target.id==='financeSignin'){ financeSignIn(); return; }
+  if(event.target.matches('[data-finance-pin-form]')){ handleFinancePin(event.target); return; }
   if(event.target.matches('[data-entry-modal-add]')){ addEntryModalItem(event.target,event.target.dataset.entryModalAdd); return; }
   if(event.target.matches('[data-entry-modal-apply]')){ applyEntryModal(event.target,event.target.dataset.entryModalApply); return; }
   if(event.target.matches('[data-cash-change-form]')){ addCashChange(event.target); return; }
@@ -1258,7 +1343,7 @@ function deleteItem(kind,id){
 setInterval(function(){ if(product==='finance' && !document.hidden) refreshFinance(); },60000);
 window.addEventListener('focus',function(){ if(product==='finance') refreshFinance(); });
 window.addEventListener('pageshow',function(event){
-  if(event.persisted){ lockWealth(); render(); }
+  if(event.persisted){ lockFinanceSections(); render(); }
 });
 
 if(location.hash.indexOf('#finance/')===0) setProduct('finance');
