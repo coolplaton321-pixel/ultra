@@ -30,3 +30,38 @@ create policy "Users update their own Ultra state"
   to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
+
+-- Private myFinances document. Financial figures are never embedded in the
+-- public frontend; every signed-in user can access only their own row.
+create table if not exists public.finance_state (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  state jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  constraint finance_state_object check (jsonb_typeof(state) = 'object')
+);
+
+alter table public.finance_state enable row level security;
+
+revoke all on table public.finance_state from anon;
+grant select, insert, update, delete on table public.finance_state to authenticated;
+
+drop policy if exists "Users read their own finance state" on public.finance_state;
+create policy "Users read their own finance state"
+  on public.finance_state for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "Users create their own finance state" on public.finance_state;
+create policy "Users create their own finance state"
+  on public.finance_state for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "Users update their own finance state" on public.finance_state;
+create policy "Users update their own finance state"
+  on public.finance_state for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "Users delete their own finance state" on public.finance_state;
+create policy "Users delete their own finance state"
+  on public.finance_state for delete to authenticated
+  using ((select auth.uid()) = user_id);

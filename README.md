@@ -1,8 +1,9 @@
 # ULTRA
 
-A private-first streak tracker. It works offline with browser storage and can
-optionally sync the same habit data between a computer and phone through
-Supabase.
+A private-first habits and personal-finance tracker. Habit clicks work offline
+with browser storage and sync between devices through Supabase. The myFinances
+workspace stores its figures only in a signed-in user's private Supabase row;
+balances are never embedded in the public site files.
 
 ## Run locally
 
@@ -26,11 +27,15 @@ Then open `http://localhost:8080`.
 Only the public browser key belongs in `config.js`. Never add a Supabase
 `service_role` or secret key to this project.
 
-## Publish later with GitHub Pages
+`ultra_state` stores the habit document and `finance_state` stores the finance
+document. Both tables use row-level security keyed to `auth.uid()` and deny
+anonymous table access.
+
+## Publish with GitHub Pages
 
 The repository is already a static Pages-compatible site. When ready, push it
 to GitHub and select **Settings > Pages > Deploy from a branch**, using the
-repository root. No publishing has been performed yet.
+repository root.
 
 If email confirmation is enabled in Supabase, add the final GitHub Pages URL to
 Authentication > URL Configuration before creating the production account.

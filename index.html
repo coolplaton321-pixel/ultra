@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#08090E">
-<title>ULTRA — Streak Tracker</title>
+<title>ULTRA — Habits &amp; myFinances</title>
+<link rel="stylesheet" href="finance.css?v=20260902-blank-private-finance">
 <style>
 /* ============================================================
    ULTRA — personal streak tracker. Desktop-first, single page.
@@ -136,6 +137,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .tcard.changed{animation:card-confirm .46s cubic-bezier(.2,.8,.2,1)}
 .tcard.done{background:rgba(67,209,90,.055);border-color:rgba(67,209,90,.32)}
 .tcard.part{background:rgba(240,176,60,.05);border-color:rgba(240,176,60,.32)}
+.tcard.broken{background:rgba(236,75,94,.055);border-color:rgba(236,75,94,.36)}
 .tcard.rest{background:rgba(176,108,255,.07);border-color:rgba(176,108,255,.42)}
 .tcard.locked{background:linear-gradient(145deg,rgba(176,108,255,.055),rgba(17,19,25,.96));
   border-color:rgba(176,108,255,.24);border-style:dashed}
@@ -154,6 +156,9 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .go.on.amber{background:var(--amber);color:#301F02}
 .go.purple,.go.on.purple{background:var(--purple);color:#180B25}
 .go.purple:hover,.go.on.purple:hover{background:#BD84FF;filter:none}
+.go.danger{border-color:rgba(236,75,94,.28);background:rgba(236,75,94,.08);color:#F0A4AD}
+.go.danger:hover{background:rgba(236,75,94,.16);color:#FFD5DA}
+.go.on.danger{background:var(--red);color:#260307}
 .go.on:hover{filter:brightness(1.07)}
 .go.changed{animation:button-confirm .42s cubic-bezier(.2,.9,.25,1.35)}
 .hint{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
@@ -168,6 +173,19 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .go.launch-lock{border-color:rgba(176,108,255,.24);background:rgba(176,108,255,.09);color:#BDA1D9;
   cursor:not-allowed;letter-spacing:.07em;line-height:1.35}
 .go.launch-lock b{display:block;color:#E0C4FF;font-size:11px;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.habit-group+.habit-group{margin-top:18px}
+.habit-group-title{display:flex;align-items:center;gap:9px;margin:0 0 9px;color:var(--dim);font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.habit-group-title:after{content:"";height:1px;flex:1;background:var(--line)}
+.today-grid.active{grid-template-columns:repeat(4,minmax(0,1fr))}
+.today-grid.passive{grid-template-columns:repeat(2,minmax(0,1fr));max-width:570px}
+.passive-note{font-size:9px;line-height:1.45;color:var(--dim2)}
+.cheat-count{display:block;margin-top:-5px;color:var(--purple);font-size:9px;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
+.nutrition-form{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:auto}
+.nutrition-field{display:grid;gap:4px;color:var(--dim);font-size:8px;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+.nutrition-field input{min-width:0;width:100%;height:35px;padding:0 8px;border:1px solid var(--line2);border-radius:7px;background:#11131A;color:var(--txt);font:inherit;font-size:12px;font-weight:700;outline:0;font-variant-numeric:tabular-nums}
+.nutrition-field input:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blueSoft)}
+.nutrition-save{grid-column:1/-1;padding:9px 8px;border-radius:8px;background:var(--blueBtn);color:#EAF3FF;font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.nutrition-save:hover{background:#3A8FE6}
 
 /* ---------- month nav ---------- */
 .mnav{display:flex;align-items:center;gap:10px;flex:none}
@@ -182,6 +200,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .cals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
 .ccard{border:1px solid var(--line);background:var(--card);border-radius:var(--r);padding:15px}
 .ccard.master{border-color:rgba(231,185,60,.28)}
+.ccard.nutrition-calendar{grid-column:1/-1}
 .ch{display:flex;align-items:center;gap:8px;margin-bottom:13px}
 .ch b{font-size:13px;font-weight:600;flex:1}
 .ch .n{display:flex;align-items:center;gap:5px;font-size:15px;font-weight:700;letter-spacing:-.01em}
@@ -205,6 +224,22 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .cell.edit{cursor:pointer}
 .cell.edit:hover{border-color:var(--blue);filter:brightness(1.3)}
 .cell.changed{animation:cell-confirm .4s cubic-bezier(.2,.9,.25,1.3)}
+.cell-day{display:block}
+.nutrition-calendar .cal{gap:6px}
+.nutrition-calendar .cell{aspect-ratio:auto;min-height:62px;display:flex;flex-direction:column;align-items:flex-start;
+  justify-content:flex-start;padding:7px;text-align:left}
+.nutrition-calendar .cell.blank{visibility:hidden}
+.nutrition-day-stats{display:grid;gap:2px;margin-top:auto;max-width:100%;font-size:8.5px;line-height:1.15;
+  color:currentColor;font-variant-numeric:tabular-nums;white-space:nowrap}
+.nutrition-day-stats b{font-size:9.5px;font-weight:750;color:var(--txt)}
+.nutrition-history-editor{display:grid;grid-template-columns:minmax(130px,1fr) repeat(2,minmax(120px,.8fr)) auto auto;
+  position:relative;align-items:end;gap:8px;margin-top:12px;padding:12px;border:1px solid var(--line2);border-radius:9px;background:#0D0F15}
+.nutrition-edit-title{align-self:center;display:grid;gap:3px}
+.nutrition-edit-title span{font-size:8px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--blue)}
+.nutrition-edit-title b{font-size:12px;font-weight:650}
+.nutrition-history-editor .nutrition-save{grid-column:auto;height:35px;padding:0 14px}
+.nutrition-close{width:35px;height:35px;border:1px solid var(--line2);border-radius:7px;color:var(--dim);font-size:17px}
+.nutrition-close:hover{border-color:var(--red);color:var(--red)}
 .cstat{display:flex;justify-content:space-between;gap:8px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line);
   font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dim2)}
 .cstat b{color:var(--txt);font-weight:700;font-variant-numeric:tabular-nums}
@@ -303,10 +338,15 @@ textarea{width:100%;height:110px;border-radius:8px;background:#0C0E14;border:1px
 @media(max-width:1040px){
   .cals{grid-template-columns:repeat(2,minmax(0,1fr))}
   .today-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .today-grid.active{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:720px){
   .wrap{padding:0 16px 48px}.hin{padding:12px 16px;gap:12px}
-  .cals{grid-template-columns:1fr}.today-grid{grid-template-columns:1fr}
+  .cals{grid-template-columns:1fr}.today-grid,.today-grid.active,.today-grid.passive{grid-template-columns:1fr;max-width:none}
+  .nutrition-calendar .cal{gap:3px}.nutrition-calendar .cell{min-height:54px;padding:5px 3px}
+  .nutrition-day-stats{font-size:7px}.nutrition-day-stats b{font-size:7.5px}.nutrition-day-stats .protein-label{display:none}
+  .nutrition-history-editor{grid-template-columns:1fr 1fr}.nutrition-edit-title{grid-column:1/-1}
+  .nutrition-history-editor .nutrition-save{grid-column:1/-1}.nutrition-close{position:absolute;right:12px;top:12px}
   .dwrap{grid-template-columns:1fr}
   .ultra{padding:20px}.ultra .big b{font-size:52px}.ultra .side{margin-left:0;gap:24px}
   .clock,.lock,.saved{display:none}
@@ -325,6 +365,10 @@ textarea{width:100%;height:110px;border-radius:8px;background:#0C0E14;border:1px
       <span class="who"><b id="who">Plato</b><span>ULTRA</span></span>
     </span>
     <input type="file" id="avatarFile" accept="image/*" hidden>
+    <nav class="product-nav" aria-label="Tracker sections">
+      <button class="product-tab active" data-product="habits">Habits</button>
+      <button class="product-tab" data-product="finance">myFinances</button>
+    </nav>
     <span class="clock"><span class="t num" id="clock">--:--:--</span><span class="z">Dublin</span></span>
     <span class="hstreak" id="hstreak"></span>
     <span class="lock" id="lock"></span>
@@ -334,6 +378,7 @@ textarea{width:100%;height:110px;border-radius:8px;background:#0C0E14;border:1px
 </header>
 
 <main class="wrap" id="app"></main>
+<main class="finance-shell" id="financeApp" hidden></main>
 <div class="toast" id="toast"></div>
 
 <script src="config.js"></script>
@@ -350,18 +395,20 @@ const KEY = 'ultra.streaks.v1';
 const AVATAR_KEY = 'ultra.avatar.v1';
 const YEARLY_REST_GOAL = 20;
 const SLEEP_LAUNCH = '2026-08-28';
+const PASSIVE_START = '2026-09-01';
 const ROLLOVER_BEFORE_LAUNCH = 4;
 const ROLLOVER_AFTER_LAUNCH = 0;
+const STATE_VERSION = 4;
 
+// mode: active = user confirms it | passive = succeeds unless a break is logged
 // kind: strict = no buffer | grace = one missed day allowed | eat = graded
 const HABITS = [
-  { id:'eat',   name:'Eat Well',   sym:'fork',  kind:'eat', goal:365,
-    actions:[{v:1,label:'Protein',tone:'amber'},{v:2,label:'Protein + kcal'}] },
-  { id:'read',  name:'Reading',    sym:'book',  kind:'grace',  goal:365, actions:[{v:2,label:'Done'}] },
-  { id:'reels', name:'No Reels',   sym:'phone', kind:'strict', goal:365, actions:[{v:2,label:'Done'}] },
-  { id:'nofap', name:'No Карты + No Погода', displayName:'No Карты<br>+<br>No Погода', sym:'lock', kind:'strict', goal:14, reset:true, actions:[{v:2,label:'Done'}] },
-  { id:'room',  name:'Room Clean', sym:'broom', kind:'grace',  goal:365, actions:[{v:2,label:'Done'}] },
-  { id:'sleep', name:'Sleep Now!', sym:'moon',  kind:'grace',  goal:365, start:SLEEP_LAUNCH, actions:[{v:2,label:'Done',tone:'purple'}] },
+  { id:'eat',   name:'Eat Well',   sym:'fork',  mode:'active', kind:'eat', goal:365, actions:[{v:1},{v:2}] },
+  { id:'read',  name:'Reading',    sym:'book',  mode:'active', kind:'grace', goal:365, actions:[{v:2,label:'Done'}] },
+  { id:'room',  name:'Room Clean', sym:'broom', mode:'active', kind:'grace', goal:365, actions:[{v:2,label:'Done'}] },
+  { id:'sleep', name:'Sleep Now!', sym:'moon',  mode:'active', kind:'grace', goal:365, start:SLEEP_LAUNCH, actions:[{v:2,label:'Done',tone:'purple'}] },
+  { id:'reels', name:'No Reels',   sym:'phone', mode:'passive', kind:'strict', goal:365, actions:[{v:0,label:'I broke it',tone:'danger'}] },
+  { id:'nofap', name:'No Карты + No Погода', displayName:'No Карты<br>+<br>No Погода', sym:'lock', mode:'passive', kind:'strict', goal:14, reset:true, actions:[{v:0,label:'I broke it',tone:'danger'}] },
 ];
 
 /* line symbols, drawn rather than emoji */
@@ -462,13 +509,19 @@ let storageOK = false, lastSaved = null;
 let S = null;
 let CLOUD = null, cloudUser = null, cloudSaveT = null, cloudQueue = Promise.resolve();
 let cloudMessage = '', cloudTone = '';
-function blank(){ const log = {}; HABITS.forEach(h => log[h.id] = {}); return { v:2, start:TODAY, log:log, updatedAt:null }; }
+function blank(){ const log = {}; HABITS.forEach(h => log[h.id] = {}); return { v:STATE_VERSION, start:TODAY, log:log, nutrition:{}, updatedAt:null }; }
 function normaliseState(p){
   if(!p || !p.log) return null;
   HABITS.forEach(h => { if(!p.log[h.id]) p.log[h.id] = {}; });
+  if(!p.nutrition || typeof p.nutrition !== 'object') p.nutrition = {};
+  Object.keys(p.log.eat).forEach(function(k){
+    if(p.nutrition[k]) return;
+    if(p.log.eat[k] === 2) p.nutrition[k] = { calories:2900, protein:175 };
+    else if(p.log.eat[k] === 1) p.nutrition[k] = { calories:2500, protein:150 };
+  });
   if(!p.start) p.start = TODAY;
   if(!p.updatedAt) p.updatedAt = null;
-  p.v = 2;
+  p.v = STATE_VERSION;
   return p;
 }
 function load(){
@@ -476,7 +529,9 @@ function load(){
   try{
     const raw = localStorage.getItem(KEY);
     if(!raw) return blank();
-    return normaliseState(JSON.parse(raw)) || blank();
+    const parsed=JSON.parse(raw), oldVersion=Number(parsed.v||0), state=normaliseState(parsed);
+    if(state && oldVersion<STATE_VERSION) localStorage.setItem(KEY,JSON.stringify(state));
+    return state || blank();
   }catch(e){ return blank(); }
 }
 function writeLocal(){
@@ -511,11 +566,19 @@ function loadAvatar(){
                purple (automatic relax day after 14 progress days)
                red (the day it broke) | off (no live chain)
                pending (today, not logged yet)
-   A finished day with no confirmation is a miss — silence is the slip.
+   Active habits need confirmation. Passive habits count automatically from
+   1 September 2026 unless the user records a break.
    ========================================================= */
 let E = null;
+function nutritionValue(k){
+  const entry = S.nutrition && S.nutrition[k];
+  if(!entry) return S.log.eat[k];
+  const calories = Number(entry.calories), protein = Number(entry.protein);
+  const caloriesMet = calories > 2700, proteinMet = protein >= 150;
+  return caloriesMet && proteinMet ? 2 : caloriesMet || proteinMet ? 1 : 0;
+}
 function evaluate(){
-  let min = TODAY;
+  let min = S.start && S.start < TODAY ? S.start : TODAY;
   HABITS.forEach(h => Object.keys(S.log[h.id]).forEach(k => { if(k < min) min = k; }));
   S.start = min;
 
@@ -525,20 +588,21 @@ function evaluate(){
   const H = {};
   HABITS.forEach(function(h){
     const day = {};
-    let streak = 0, best = 0, skips = 0, ambers = 0, rests = 0;
+    let streak = 0, best = 0, skips = 0, rests = 0;
 
     keys.forEach(function(k){
       if(h.start && k < h.start){ day[k] = 'locked'; return; }
       if(h.reset && streak >= h.goal){
         day[k] = 'purple';
-        streak = 0; skips = 0; ambers = 0; rests++;
+        streak = 0; skips = 0; rests++;
         return;
       }
-      const v = S.log[h.id][k];
+      const v = h.id === 'eat' ? nutritionValue(k) : S.log[h.id][k];
       if(v === undefined && k === TODAY){ day[k] = 'pending'; return; }   // only today is still open
 
       if(h.kind === 'strict'){
-        if(v === 2){ streak++; day[k] = 'green'; }
+        const automatic = h.mode === 'passive' && k >= PASSIVE_START;
+        if(v === 2 || (automatic && v !== 0)){ streak++; day[k] = 'green'; }
         else { day[k] = streak > 0 ? 'red' : 'off'; streak = 0; }
 
       } else if(h.kind === 'grace'){
@@ -550,19 +614,15 @@ function evaluate(){
         }
 
       } else { // eat
-        if(v === 2){ streak++; ambers = 0; day[k] = 'green'; }
-        else if(v === 1){
-          ambers++;
-          if(ambers >= 2){ day[k] = 'red'; streak = 0; ambers = 0; }
-          else { streak++; day[k] = 'amber'; }
-        }
-        else { day[k] = streak > 0 ? 'red' : 'off'; streak = 0; ambers = 0; }
+        if(v === 2){ streak++; day[k] = 'green'; }
+        else if(v === 1){ streak++; day[k] = 'amber'; }
+        else { day[k] = v === 0 || streak > 0 ? 'red' : 'off'; streak = 0; }
       }
       if(streak > best) best = streak;
     });
 
     H[h.id] = { day:day, streak:streak, best:best, rests:rests,
-      warned: day[YEST] === 'amber' };
+      warned: h.kind === 'grace' && day[YEST] === 'amber' };
   });
 
   const uday = {};
@@ -632,6 +692,7 @@ function weekRange(){
    ========================================================= */
 let VIEW = (function(){ const d = toDate(TODAY); return { y:d.getFullYear(), m:d.getMonth() }; })();
 let MOTION = null;
+let NUTRITION_DAY = null;
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -663,35 +724,57 @@ function todayHTML(){
   const note = warn.length
     ? '<div class="note">Buffer already used yesterday — '+warn.join(', ')+' must go green today.</div>' : '';
 
-  const cards = HABITS.map(function(h){
-    const hh = E.h[h.id], v = S.log[h.id][TODAY];
+  const cards = {};
+  HABITS.forEach(function(h){
+    const hh = E.h[h.id], v = h.id === 'eat' ? nutritionValue(TODAY) : S.log[h.id][TODAY];
     const isRest = hh.day[TODAY] === 'purple';
     const isLocked = hh.day[TODAY] === 'locked';
     const progress = isRest ? h.goal : hh.streak;
     const changed = MOTION && MOTION.type === 'habit' && MOTION.hid === h.id && MOTION.k === TODAY;
-    const cls = (isLocked ? 'locked' : isRest ? 'rest' : v === 2 ? 'done' : v === 1 ? 'part' : '') + (changed ? ' changed' : '');
-    const btns = isLocked
+    const cls = (isLocked ? 'locked' : isRest ? 'rest' : v === 2 ? 'done' : v === 1 ? 'part' : v === 0 ? 'broken' : '') + (changed ? ' changed' : '');
+    let btns = isLocked
       ? '<button class="go launch-lock" disabled>Unlocks in<b class="num" id="sleepCountdown">'+launchCountdown()+'</b></button>'
-      : isRest ? '<div class="rest-day">Relax day</div>' : h.actions.map(function(a){
-      return '<button class="go'+(a.tone==='purple'?' purple':'')+(v===a.v ? ' on'+(a.tone==='amber'?' amber':'') : '')
+      : isRest ? '<div class="rest-day">'+(h.reset?'Cheat day':'Relax day')+'</div>' : h.actions.map(function(a){
+      return '<button class="go'+(a.tone==='purple'?' purple':'')+(a.tone==='danger'?' danger':'')+(v===a.v ? ' on'+(a.tone==='amber'?' amber':'') : '')
         + (changed && MOTION.v === a.v ? ' changed' : '')+'" '
         + 'data-h="'+h.id+'" data-k="'+TODAY+'" data-v="'+a.v+'">'+a.label+'</button>';
     }).join('');
+    if(h.id === 'eat' && !isLocked){
+      const n = S.nutrition[TODAY] || {};
+      btns = '<form class="nutrition-form" data-nutrition data-k="'+TODAY+'">'
+        + '<label class="nutrition-field">Calories<input name="calories" type="number" min="0" step="1" inputmode="numeric" value="'+esc(n.calories == null?'':n.calories)+'" required></label>'
+        + '<label class="nutrition-field">Protein, g<input name="protein" type="number" min="0" step="1" inputmode="numeric" value="'+esc(n.protein == null?'':n.protein)+'" required></label>'
+        + '<button class="nutrition-save" type="submit">Save totals</button></form>';
+    }
     let hint = '<span class="hint dim">Not logged</span>';
     if(isLocked) hint = '<span class="hint launch">Arrives 28 August 2026</span>';
-    else if(isRest) hint = '<span class="hint purple">Purple earned — reset tomorrow</span>';
+    else if(isRest) hint = '<span class="hint purple">'+(h.reset?'Cheat day — resets tomorrow':'Purple earned — reset tomorrow')+'</span>';
+    else if(h.mode === 'passive' && v === 0) hint = '<span class="hint red">Broken today</span>';
+    else if(h.mode === 'passive') hint = '';
+    else if(h.id === 'eat' && v === 2) hint = '<span class="hint good">Both targets complete</span>';
+    else if(h.id === 'eat' && v === 1) hint = '<span class="hint">One target complete</span>';
+    else if(h.id === 'eat' && v === 0) hint = '<span class="hint red">Targets not reached</span>';
     else if(v === 2) hint = '<span class="hint good">Day '+hh.streak+' of '+h.goal+' secured</span>';
     else if(v === 1) hint = '<span class="hint">Partial — streak '+hh.streak+'</span>';
     else if(hh.warned) hint = '<span class="hint red">Must go green</span>';
-    return '<div class="tcard '+cls+'">'
+    let cheat = '';
+    if(h.reset){
+      const left = Math.max(0, h.goal - hh.streak);
+      cheat = '<span class="cheat-count">'+(isRest?'Cheat day today':left===0?'Cheat day tomorrow':left+' day'+(left===1?'':'s')+' until cheat day')+'</span>';
+    }
+    cards[h.id] = '<div class="tcard '+cls+'">'
       + '<div class="th">'+sym(h.sym)+'<b>'+(h.displayName || h.name)+'</b>'
       +   '<span class="n">'+flame(progress, 20, changed, isRest)+'<span class="num">'+progress+'</span><span class="cycle-goal">/'+h.goal+'</span></span></div>'
-      + hint
+      + hint + cheat
       + '<div class="btns">'+btns+'</div></div>';
-  }).join('');
+  });
+
+  const active = HABITS.filter(h => h.mode !== 'passive').map(h => cards[h.id]).join('');
+  const passive = HABITS.filter(h => h.mode === 'passive').map(h => cards[h.id]).join('');
 
   return '<div class="sec"><h2>Today</h2><div class="rule"></div><span class="aside">'+pretty(TODAY)+'</span></div>'
-    + '<section class="today-grid">'+cards+'</section>' + note;
+    + '<section class="habit-group"><h3 class="habit-group-title">Active habits</h3><div class="today-grid active">'+active+'</div></section>'
+    + '<section class="habit-group"><h3 class="habit-group-title">Passive habits</h3><div class="today-grid passive">'+passive+'</div><p class="passive-note">These count automatically when the day closes. Press the button only if you broke the habit.</p></section>' + note;
 }
 
 function calHTML(hid){
@@ -707,11 +790,31 @@ function calHTML(hid){
     const st = k > TODAY ? 'future' : (hid ? (E.h[hid].day[k] || 'off') : (E.ultra.day[k] || 'off'));
     const ed = hid && editable(k) && st !== 'purple' && st !== 'locked';
     const changed = MOTION && MOTION.type === 'calendar' && MOTION.hid === hid && MOTION.k === k;
+    const n = hid === 'eat' && S.nutrition ? S.nutrition[k] : null;
+    const calories = n && Number(n.calories), protein = n && Number(n.protein);
+    const hasNutrition = n && Number.isFinite(calories) && Number.isFinite(protein);
+    const calorieText = hasNutrition ? calories.toLocaleString('en-IE',{maximumFractionDigits:1}) : '';
+    const proteinText = hasNutrition ? protein.toLocaleString('en-IE',{maximumFractionDigits:1}) : '';
+    const contents = '<span class="cell-day">'+d+'</span>' + (hasNutrition
+      ? '<span class="nutrition-day-stats"><b>'+calorieText+' kcal</b><span>'+proteinText+'g<span class="protein-label"> protein</span></span></span>' : '');
+    const title = pretty(k) + (hasNutrition ? ' — '+calorieText+' kcal, '+proteinText+' g protein' : '')
+      + (ed ? hid === 'eat' ? ' — click to add or edit totals' : ' — click to change' : '');
     c += '<button class="cell '+(MAP[st]||'')+(k===TODAY?' today':'')+(ed?' edit':'')+(changed?' changed':'')+'"'
-       + (ed ? ' data-cyc="'+hid+'" data-k="'+k+'" title="'+pretty(k)+' — click to change"' : ' disabled')
-       + '>'+d+'</button>';
+       + (ed ? ' data-cyc="'+hid+'" data-k="'+k+'"' : ' disabled')+' title="'+title+'"'
+       + '>'+contents+'</button>';
   }
   return '<div class="cal">'+c+'</div>';
+}
+
+function nutritionHistoryEditor(){
+  if(!NUTRITION_DAY) return '';
+  const n = S.nutrition[NUTRITION_DAY] || {};
+  return '<form class="nutrition-history-editor" data-nutrition data-k="'+NUTRITION_DAY+'">'
+    + '<div class="nutrition-edit-title"><span>Edit daily totals</span><b>'+pretty(NUTRITION_DAY)+'</b></div>'
+    + '<label class="nutrition-field">Calories<input name="calories" type="number" min="0" step="1" inputmode="numeric" value="'+esc(n.calories == null?'':n.calories)+'" required></label>'
+    + '<label class="nutrition-field">Protein, g<input name="protein" type="number" min="0" step="1" inputmode="numeric" value="'+esc(n.protein == null?'':n.protein)+'" required></label>'
+    + '<button class="nutrition-save" type="submit">Save totals</button>'
+    + '<button class="nutrition-close" type="button" data-close-nutrition aria-label="Close nutrition editor">×</button></form>';
 }
 
 function calsHTML(){
@@ -733,10 +836,11 @@ function calsHTML(){
       ? '<span class="rest-count"><b>'+Y.purple+'</b>/'+YEARLY_REST_GOAL+' purple</span>'
       : '<span><b>'+Y.green+'</b>/'+h.goal+' yr</span>';
     const changed = MOTION && MOTION.type === 'calendar' && MOTION.hid === h.id;
-    return '<div class="ccard">'
+    return '<div class="ccard'+(h.id === 'eat' ? ' nutrition-calendar' : '')+'">'
       + '<div class="ch">'+sym(h.sym)+'<b>'+(h.displayName || h.name)+'</b>'
       +   '<span class="n">'+flame(progress, 18, changed, isRest)+'<span class="num">'+progress+'</span><span class="cycle-goal">/'+h.goal+'</span></span></div>'
       + calHTML(h.id)
+      + (h.id === 'eat' ? nutritionHistoryEditor() : '')
       + '<div class="cstat"><span><b>'+M.green+'</b>/'+dim+' '+mon+'</span>'
       +   '<span><b>'+W.green+'</b>/7 week</span>'+yearStat+'</div>'
       + '</div>';
@@ -757,7 +861,7 @@ function calsHTML(){
     +   '<b>'+MONTHS[VIEW.m]+' '+VIEW.y+'</b>'
     +   '<button data-step="1" aria-label="Next month" '+(atNow?'disabled':'')+'>›</button></div></div>'
     + '<section class="cals">'+cards+master+'</section>'
-    + '<p class="calhelp">Click any past day to change it — once to log it, again to clear. Sleep Now! unlocks on 28 August and allows one missed day; a second consecutive miss breaks Ultra.</p>';
+    + '<p class="calhelp">Click any Eat Well day to add or edit calories and protein. Other past days can be corrected by clicking them. Passive habits count automatically from 1 September unless marked as broken.</p>';
 }
 
 function totalsHTML(){
@@ -833,6 +937,10 @@ function paintClock(){
    Local storage remains the offline source of truth until sign-in.
    ========================================================= */
 function cloudSettings(){ return window.ULTRA_CLOUD || {}; }
+function announceCloud(){
+  window.ULTRA_SUPABASE = CLOUD;
+  window.dispatchEvent(new CustomEvent('ultra-auth',{ detail:{ client:CLOUD, user:cloudUser } }));
+}
 function cloudConfigured(){
   const c = cloudSettings();
   return !!(c.supabaseUrl && c.supabaseAnonKey && !String(c.supabaseUrl).includes('YOUR_'));
@@ -901,6 +1009,7 @@ function syncCloud(){
       if(result.error) throw result.error;
       if(!result.data){ await pushCloudNow(); return; }
 
+      const remoteVersion = Number(result.data.state && result.data.state.v || 0);
       const remote = normaliseState(result.data.state);
       if(!remote) throw new Error('Cloud data is invalid');
       const remoteTime = Date.parse(result.data.updated_at || remote.updatedAt || 0) || 0;
@@ -912,6 +1021,12 @@ function syncCloud(){
         render();
         toast('Updated from cloud');
       } else if(localTime > remoteTime){
+        await pushCloudNow();
+        return;
+      }
+      if(remoteVersion < STATE_VERSION){
+        S.updatedAt = new Date().toISOString();
+        writeLocal();
         await pushCloudNow();
         return;
       }
@@ -954,14 +1069,17 @@ async function initCloud(){
   CLOUD = window.supabase.createClient(c.supabaseUrl, c.supabaseAnonKey, {
     auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
   });
+  window.ULTRA_SUPABASE = CLOUD;
   const sessionResult = await CLOUD.auth.getSession();
   cloudUser = sessionResult.data.session && sessionResult.data.session.user;
+  announceCloud();
   paintCloud();
   if(cloudUser) syncCloud();
   CLOUD.auth.onAuthStateChange(function(event, session){
     cloudUser = session && session.user;
     cloudMessage = cloudUser ? 'Signed in. Syncing your tracker…' : '';
     cloudTone = cloudUser ? 'busy' : '';
+    announceCloud();
     paintCloud();
     if(cloudUser) setTimeout(syncCloud, 0);
   });
@@ -1027,6 +1145,22 @@ function commit(before){
   else if(before > 0 && E.ultra.streak === 0) toast('Ultra streak broken');
 }
 
+document.addEventListener('submit', function(e){
+  const form = e.target.closest('[data-nutrition]');
+  if(!form) return;
+  e.preventDefault();
+  const data = new FormData(form), calories = Number(data.get('calories')), protein = Number(data.get('protein'));
+  if(!Number.isFinite(calories) || !Number.isFinite(protein) || calories < 0 || protein < 0){
+    toast('Enter valid calories and protein'); return;
+  }
+  const before = E.ultra.streak, k = form.dataset.k || TODAY;
+  S.nutrition[k] = { calories:calories, protein:protein };
+  S.log.eat[k] = nutritionValue(k);
+  MOTION = { type:'habit', hid:'eat', k:k, v:S.log.eat[k] };
+  NUTRITION_DAY = null;
+  commit(before);
+});
+
 document.addEventListener('click', function(e){
   if(e.target.closest('#avatarBtn')){
     $('#avatarFile').click(); return;
@@ -1049,6 +1183,10 @@ document.addEventListener('click', function(e){
     return;
   }
 
+  if(e.target.closest('[data-close-nutrition]')){
+    NUTRITION_DAY = null; render(); return;
+  }
+
   const go = e.target.closest('[data-h]');
   if(go){
     const before = E.ultra.streak, hid = go.dataset.h, k = go.dataset.k, v = +go.dataset.v;
@@ -1062,7 +1200,12 @@ document.addEventListener('click', function(e){
     const before = E.ultra.streak;
     const h = HABITS.find(x => x.id === cyc.dataset.cyc), k = cyc.dataset.k;
     if(!editable(k)) return;
-    const seq = h.actions.map(a => a.v).concat([undefined]);
+    if(h.id === 'eat'){
+      NUTRITION_DAY = k; render(); return;
+    }
+    let seq;
+    if(h.mode === 'passive') seq = k >= PASSIVE_START ? [0, undefined] : [2, 0, undefined];
+    else seq = h.actions.map(a => a.v).concat([undefined]);
     const next = seq[(seq.indexOf(S.log[h.id][k]) + 1) % seq.length];
     MOTION = { type:'calendar', hid:h.id, k:k };
     if(next === undefined) delete S.log[h.id][k]; else S.log[h.id][k] = next;
@@ -1071,6 +1214,7 @@ document.addEventListener('click', function(e){
 
   const st = e.target.closest('[data-step]');
   if(st){
+    NUTRITION_DAY = null;
     VIEW.m += +st.dataset.step;
     if(VIEW.m < 0){ VIEW.m = 11; VIEW.y--; }
     if(VIEW.m > 11){ VIEW.m = 0; VIEW.y++; }
@@ -1122,5 +1266,6 @@ initCloud();
 if(!storageOK) toast('This browser blocks storage — nothing will be saved');
 })();
 </script>
+<script src="finance.js?v=20260902-blank-private-finance"></script>
 </body>
 </html>
