@@ -83,7 +83,7 @@ function emptyFinance(){
       {code:'CAD',symbol:'C$',eur:0.619963}
     ],
     categories:[],
-    accounts:[], sources:[], transactions:[], assets:[], passives:[], recurring:[], planned:[], inventory:[],
+    accounts:[], sources:[], transactions:[], transfers:[], assets:[], passives:[], recurring:[], planned:[], inventory:[],
     budget:{version:4,categories:DEFAULT_BUDGET_CATEGORIES.map(item=>Object.assign({},item)),monthlyAssignments:{},weeklyPlans:{},monthlyBudgets:{},deletedCategoryIds:[]},
     security:{version:1,budgetPin:null,wealthPin:null},
     historicalAnalytics:JSON.parse(JSON.stringify(HISTORICAL_SPENDING_2025)),
@@ -730,10 +730,11 @@ function entryModalHTML(){
 function cashChangeModalHTML(){
   if(!cashChangePrompt) return '';
   const close='<button class="modal-close" type="button" data-cash-change-no aria-label="Close">×</button>';
-  if(cashChangePrompt.step==='amount'){
-    return '<div class="entry-modal-backdrop" data-cash-change-backdrop><section class="entry-modal change-modal" role="dialog" aria-modal="true" aria-label="Add cash change"><div class="modal-head"><h2>Add your change</h2>'+close+'</div><div class="change-coin">🪙</div><p>Enter the coin amount in euros and cents.</p><form data-cash-change-form><label class="cents-input"><span class="change-symbol">€</span><input name="changeAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-label="Change amount in euros" required autofocus><span class="change-code">EUR</span></label><button class="change-primary" type="submit">Add to Coins · euro cup</button></form></section></div>';
+  const code=cashChangePrompt.currency||'EUR', symbol=currency(code).symbol, tendered=money(cashChangePrompt.tendered,code);
+  if(cashChangePrompt.step==='coins'){
+    return '<div class="entry-modal-backdrop" data-cash-change-backdrop><section class="entry-modal change-modal" role="dialog" aria-modal="true" aria-label="Coin change"><div class="modal-head"><h2>Coin change</h2>'+close+'</div><div class="change-coin">🪙</div><h3>Any change in coins?</h3><p>You handed over '+tendered+' and received '+money(cashChangePrompt.banknoteChange,code)+' back in banknotes. Enter coin change, or leave zero.</p><form data-cash-change-form><label class="cents-input"><span class="change-symbol">'+esc(symbol)+'</span><input name="coinChange" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" value="0.00" aria-label="Coin change" required autofocus><span class="change-code">'+esc(code)+'</span></label><button class="change-primary" type="submit">Save actual expense</button></form></section></div>';
   }
-  return '<div class="entry-modal-backdrop" data-cash-change-backdrop><section class="entry-modal change-modal" role="dialog" aria-modal="true" aria-label="Cash change"><div class="modal-head"><h2>Cash payment saved</h2>'+close+'</div><div class="change-coin">🪙</div><h3>Did you receive any coins?</h3><p>If yes, I’ll move the change from Cash · euros into Coins · euro cup.</p><div class="change-actions"><button class="f-secondary" type="button" data-cash-change-no>No coins</button><button class="change-primary" type="button" data-cash-change-yes>Yes, add change</button></div></section></div>';
+  return '<div class="entry-modal-backdrop" data-cash-change-backdrop><section class="entry-modal change-modal" role="dialog" aria-modal="true" aria-label="Banknote change"><div class="modal-head"><h2>Cash payment</h2>'+close+'</div><div class="change-coin">💶</div><h3>Change in banknotes?</h3><p>You entered '+tendered+' as the amount handed over. Enter the banknotes returned to you, or leave zero.</p><form data-cash-change-form><label class="cents-input"><span class="change-symbol">'+esc(symbol)+'</span><input name="banknoteChange" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" value="0.00" aria-label="Banknote change" required autofocus><span class="change-code">'+esc(code)+'</span></label><button class="change-primary" type="submit">Continue to coin change</button></form></section></div>';
 }
 
 function isInfrequentAccount(item){
@@ -767,7 +768,8 @@ function transactionRow(item){
   const cat=F.categories.find(x=>x.id===item.categoryId), source=F.sources.find(x=>x.id===item.sourceId), account=F.accounts.find(x=>x.id===item.accountId);
   const title=item.type==='expense'?(cat&&cat.name||'Expense'):(source&&source.name||'Income');
   const marker=item.type==='expense'?'<span class="f-row-emoji">'+categoryEmoji(title)+'</span>':'<i class="f-dot income"></i>';
-  return '<div class="f-row">'+marker+'<div class="f-row-main"><b>'+esc(title)+'</b><span>'+esc(dateLabel(item.date))+(account?' · '+esc(account.name):'')+(item.note?' · '+esc(item.note):'')+'</span></div>'
+  const cashDetail=item.cashPayment?' · tendered '+money(item.cashPayment.tendered,item.cashPayment.currency)+' · change '+money(Number(item.cashPayment.banknoteChange||0)+Number(item.cashPayment.coinChange||0),item.cashPayment.currency):'';
+  return '<div class="f-row">'+marker+'<div class="f-row-main"><b>'+esc(title)+'</b><span>'+esc(dateLabel(item.date))+(account?' · '+esc(account.name):'')+cashDetail+(item.note?' · '+esc(item.note):'')+'</span></div>'
     +'<div class="f-row-amount '+(item.type==='income'?'f-positive':'f-negative')+'">'+(item.type==='income'?'+':'−')+money(item.amount,item.currency)+'</div><button data-delete="transaction" data-id="'+esc(item.id)+'" aria-label="Delete">×</button></div>';
 }
 
@@ -842,6 +844,21 @@ function addBudgetEnvelope(form){
   scheduleSave(); render(); toast(item.name+' envelope added');
 }
 
+function transferRow(item){
+  const from=F.accounts.find(account=>account.id===item.fromAccountId), to=F.accounts.find(account=>account.id===item.toAccountId);
+  return '<div class="cash-transfer-row"><span class="cash-transfer-icon" aria-hidden="true">↗</span><div><b>'+esc(from&&from.name||'Cash')+' → '+esc(to&&to.name||'Card')+'</b><small>'+esc(dateLabel(item.date))+(item.note?' · '+esc(item.note):'')+'</small></div><strong>'+money(item.amount,item.currency)+'</strong></div>';
+}
+
+function renderCashTransfer(){
+  const cashAccounts=F.accounts.filter(item=>accountSectionKey(item)==='cash');
+  const cardAccounts=F.accounts.filter(item=>accountSectionKey(item)==='cards');
+  const recent=F.transfers.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,4);
+  const form=cashAccounts.length&&cardAccounts.length
+    ? '<form class="cash-transfer-form" data-cash-transfer-form><label><span>From cash</span><select class="f-select" name="fromAccountId" required>'+options(cashAccounts,'','id',item=>item.name+' · '+money(item.balance,item.currency))+'</select></label><label><span>To card</span><select class="f-select" name="toAccountId" required>'+options(cardAccounts,'','id',item=>item.name+' · '+money(item.balance,item.currency))+'</select></label><label><span>Amount</span><input class="f-input" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required></label><label><span>Date</span><input class="f-input" name="date" type="date" value="'+todayKey()+'" required></label><label class="cash-transfer-note"><span>Note</span><input class="f-input" name="note" maxlength="100" placeholder="Optional"></label><button class="f-submit" type="submit">Move to card</button></form>'
+    : '<div class="f-empty">Add at least one cash account and one card account to make a transfer.</div>';
+  return '<section class="f-card f-span-12 cash-transfer"><details><summary><span>↗ Cash to card</span><small>Internal transfer · not income or spending</small></summary><div class="cash-transfer-body">'+form+(recent.length?'<div class="cash-transfer-history"><div class="f-kicker">Recent transfers</div>'+recent.map(transferRow).join('')+'</div>':'')+'</div></details></section>';
+}
+
 function renderHome(){
   const cards=F.accounts.filter(item=>accountSectionKey(item)==='cards');
   const cardTotal=cards.reduce((sum,item)=>sum+eurValue(item.balance,item.currency),0);
@@ -850,6 +867,7 @@ function renderHome(){
   return '<div class="finance-grid"><section class="f-card strong f-span-12 home-overview"><div class="home-metrics"><div><span>Card balances</span><b>'+euro(cardTotal)+'</b></div><div class="spend"><span>Estimated spending</span><b>'+euro(estimatedSpend)+'</b></div><div class="income"><span>Estimated income</span><b>'+euro(estimatedIncome)+'</b></div></div></section>'
     +'<section class="f-card f-span-12"><div class="f-card-head"><h2>Card balances</h2><span class="f-quiet">'+cards.length+' '+(cards.length===1?'account':'accounts')+'</span></div>'
     +(cards.length?'<div class="home-card-grid">'+cards.map(homeBalanceCard).join('')+'</div>':'<div class="f-empty">No card accounts yet.</div>')+'</section>'
+    +renderCashTransfer()
     +renderBudgetWorkspace()
     +'<section class="f-card f-span-12 home-tools"><details><summary>Planning & expected expenses</summary>'+renderPlanning()+'</details><details><summary>Income sources & settings</summary>'+renderOther()+'</details></section></div>';
 }
@@ -1117,7 +1135,6 @@ app.addEventListener('click', function(event){
   if(event.target.closest('[data-go-habits]')){ setProduct('habits'); const cloud=$('#cloudStatus'); if(cloud) cloud.click(); return; }
   if(event.target.closest('[data-retry-finance]')){ loadFinance(); return; }
   if(event.target.closest('[data-cash-change-no]') || event.target.hasAttribute('data-cash-change-backdrop')){ cashChangePrompt=null; render(); return; }
-  if(event.target.closest('[data-cash-change-yes]')){ cashChangePrompt.step='amount'; render(); return; }
   if(event.target.closest('[data-close-entry-modal]') || event.target.hasAttribute('data-entry-modal-backdrop')){ entryModal=''; render(); return; }
   const type=event.target.closest('[data-entry-type]');
   if(type){ entryType=type.dataset.entryType; quickPanel=''; entryModal=''; render(); return; }
@@ -1211,6 +1228,7 @@ app.addEventListener('submit', function(event){
   if(event.target.matches('[data-entry-modal-add]')){ addEntryModalItem(event.target,event.target.dataset.entryModalAdd); return; }
   if(event.target.matches('[data-entry-modal-apply]')){ applyEntryModal(event.target,event.target.dataset.entryModalApply); return; }
   if(event.target.matches('[data-cash-change-form]')){ addCashChange(event.target); return; }
+  if(event.target.matches('[data-cash-transfer-form]')){ addCashTransfer(event.target); return; }
   if(event.target.matches('[data-historical-baseline-form]')){ updateHistoricalBaseline(event.target); return; }
   if(event.target.matches('[data-historical-category-form]')){ addHistoricalCategory(event.target); return; }
   if(event.target.matches('[data-budget-envelope-form]')){ addBudgetEnvelope(event.target); return; }
@@ -1276,27 +1294,64 @@ function addTransaction(){
   const accountRate=Number(currency(account.currency).eur||1);
   const accountAmount=accountRate ? eurAmount/accountRate : amount;
   const item={id:uid('txn'),type:entryType,amount:amount,currency:code,eurAmount:eurAmount,accountId:accountId,date:entryDraft.date||todayKey(),note:entryDraft.note};
+  if(entryType==='expense' && accountSectionKey(account)==='cash' && String(account.currency).toUpperCase()===String(code).toUpperCase()){
+    item.categoryId=entryDraft.categoryId;
+    cashChangePrompt={step:'banknotes',transaction:item,cashAccountId:account.id,tendered:Math.round(accountAmount*100)/100,currency:account.currency};
+    entryDraft.amount=''; entryDraft.note=''; entryDraft.date=todayKey();
+    render();
+    return;
+  }
   if(entryType==='expense'){ item.categoryId=entryDraft.categoryId; account.balance=Number(account.balance||0)-accountAmount; }
   else { item.sourceId=entryDraft.sourceId; account.balance=Number(account.balance||0)+accountAmount; }
   F.transactions.unshift(item);
-  if(entryType==='expense' && accountSectionKey(account)==='cash' && String(account.currency).toUpperCase()==='EUR') cashChangePrompt={step:'ask',transactionId:item.id,cashAccountId:account.id};
   entryDraft.amount=''; entryDraft.note=''; entryDraft.date=todayKey(); scheduleSave(); render(); toast(entryType==='expense'?'Expense added':'Income added');
 }
 
 function addCashChange(form){
-  const raw=String(new FormData(form).get('changeAmount')||'').trim().replace(',','.');
-  const amount=Math.round(Number(raw)*100)/100;
-  if(!Number.isFinite(amount)||amount<=0){ toast('Enter the change as 0.00 EUR'); return; }
-  const prompt=cashChangePrompt, transaction=prompt&&F.transactions.find(item=>item.id===prompt.transactionId);
-  const cash=prompt&&F.accounts.find(item=>item.id===prompt.cashAccountId);
-  if(!transaction||!cash){ cashChangePrompt=null; render(); return; }
-  const cupName='coins euro cup';
-  let cup=F.accounts.find(item=>String(item.name||'').toLowerCase().replace(/[·–—-]/g,' ').replace(/\s+/g,' ').trim()===cupName);
-  if(!cup){ cup={id:uid('account'),name:'Coins · euro cup',type:'coins',currency:'EUR',balance:0}; F.accounts.push(cup); }
-  cash.balance=Math.round((Number(cash.balance||0)-amount)*100)/100;
-  cup.balance=Math.round((Number(cup.balance||0)+amount)*100)/100;
-  transaction.cashChange={amount:amount,cashAccountId:cash.id,coinAccountId:cup.id};
-  cashChangePrompt=null; scheduleSave(); render(); toast(money(amount,'EUR')+' added to the euro cup');
+  const prompt=cashChangePrompt, cash=prompt&&F.accounts.find(item=>item.id===prompt.cashAccountId);
+  if(!prompt||!prompt.transaction||!cash){ cashChangePrompt=null; render(); return; }
+  const data=new FormData(form);
+  if(prompt.step==='banknotes'){
+    const banknotes=Math.round(Number(data.get('banknoteChange')||0)*100)/100;
+    if(!Number.isFinite(banknotes)||banknotes<0||banknotes>=prompt.tendered){ toast('Banknote change must be less than the amount handed over'); return; }
+    prompt.banknoteChange=banknotes;
+    prompt.step='coins';
+    render();
+    return;
+  }
+  const coins=Math.round(Number(data.get('coinChange')||0)*100)/100;
+  const banknotes=Number(prompt.banknoteChange||0), actual=Math.round((prompt.tendered-banknotes-coins)*100)/100;
+  if(!Number.isFinite(coins)||coins<0||actual<=0){ toast('Total change must be less than the amount handed over'); return; }
+  const code=prompt.currency||cash.currency||'EUR', transaction=prompt.transaction;
+  cash.balance=Math.round((Number(cash.balance||0)-prompt.tendered+banknotes)*100)/100;
+  let cup=null;
+  if(coins>0){
+    cup=F.accounts.find(item=>accountSectionKey(item)==='coins'&&String(item.currency||'EUR').toUpperCase()===String(code).toUpperCase());
+    if(!cup){ cup={id:uid('account'),name:'Coins · '+code+' cup',type:'coins',currency:code,balance:0}; F.accounts.push(cup); }
+    cup.balance=Math.round((Number(cup.balance||0)+coins)*100)/100;
+  }
+  transaction.amount=actual;
+  transaction.currency=code;
+  transaction.eurAmount=eurValue(actual,code);
+  transaction.cashPayment={tendered:prompt.tendered,banknoteChange:banknotes,coinChange:coins,currency:code,cashAccountId:cash.id,coinAccountId:cup&&cup.id||''};
+  F.transactions.unshift(transaction);
+  cashChangePrompt=null;
+  scheduleSave(); render(); toast('Expense saved: '+money(actual,code));
+}
+
+function addCashTransfer(form){
+  const data=new FormData(form), from=F.accounts.find(item=>item.id===data.get('fromAccountId')), to=F.accounts.find(item=>item.id===data.get('toAccountId'));
+  const amount=Math.round(Number(data.get('amount')||0)*100)/100;
+  if(!from||!to||accountSectionKey(from)!=='cash'||accountSectionKey(to)!=='cards'){ toast('Choose a cash account and a card'); return; }
+  if(!Number.isFinite(amount)||amount<=0){ toast('Enter a transfer amount'); return; }
+  if(amount>Number(from.balance||0)){ toast('That cash account does not have enough money'); return; }
+  const toRate=Number(currency(to.currency).eur||0), eurAmount=eurValue(amount,from.currency);
+  if(toRate<=0){ toast('Add a valid rate for '+to.currency+' first'); return; }
+  const toAmount=Math.round(eurAmount/toRate*100)/100;
+  from.balance=Math.round((Number(from.balance||0)-amount)*100)/100;
+  to.balance=Math.round((Number(to.balance||0)+toAmount)*100)/100;
+  F.transfers.unshift({id:uid('transfer'),type:'cash-to-card',amount:amount,currency:from.currency,eurAmount:eurAmount,toAmount:toAmount,toCurrency:to.currency,fromAccountId:from.id,toAccountId:to.id,date:String(data.get('date')||todayKey()),note:String(data.get('note')||'').trim()});
+  scheduleSave(); render(); toast(money(amount,from.currency)+' moved to '+to.name);
 }
 
 function addValue(form,kind){
@@ -1334,6 +1389,12 @@ function deleteItem(kind,id){
       const amount=Number(item.cashChange.amount||0);
       if(cash) cash.balance=Math.round((Number(cash.balance||0)+amount)*100)/100;
       if(cup) cup.balance=Math.round((Number(cup.balance||0)-amount)*100)/100;
+    }
+    if(item&&item.cashPayment){
+      const cash=F.accounts.find(x=>x.id===item.cashPayment.cashAccountId), cup=F.accounts.find(x=>x.id===item.cashPayment.coinAccountId);
+      const coins=Number(item.cashPayment.coinChange||0);
+      if(cash) cash.balance=Math.round((Number(cash.balance||0)+coins)*100)/100;
+      if(cup) cup.balance=Math.round((Number(cup.balance||0)-coins)*100)/100;
     }
     F.transactions=F.transactions.filter(x=>x.id!==id);
   } else if(map[kind]) F[map[kind]]=F[map[kind]].filter(x=>x.id!==id);
