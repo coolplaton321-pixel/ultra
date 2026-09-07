@@ -260,6 +260,10 @@ td:first-child{text-align:left;font-weight:500}
 tr.total td{border-top:1px solid var(--line2);color:var(--gold);font-weight:700}
 .purple-total{color:var(--purple)}
 .pc{color:var(--dim2);font-weight:600}
+.since-rate{display:inline-flex;align-items:flex-end;flex-direction:column;gap:2px;white-space:nowrap}
+.since-rate b{color:var(--txt);font-size:13px;font-weight:700}
+.since-rate small{color:var(--dim2);font-size:9px;font-weight:550;letter-spacing:.01em;text-transform:none}
+tr.total .since-rate b{color:var(--gold)}
 
 /* ---------- data ---------- */
 details{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}
@@ -679,6 +683,27 @@ function ultraTally(from, to){
   });
   return t;
 }
+function rateSinceFirstGreen(hid){
+  const states = E.h[hid].day;
+  const first = Object.keys(states).sort().find(k => k <= TODAY && states[k] === 'green');
+  if(!first) return { first:null, success:0, days:0, percent:0 };
+  const keys = rangeKeys(first, TODAY);
+  const success = keys.reduce((sum,k) => sum + (states[k] === 'green' ? 1 : 0), 0);
+  return { first:first, success:success, days:keys.length, percent:Math.round(success/keys.length*100) };
+}
+function ultraRateSinceFirstSuccess(){
+  const states = E.ultra.day, passed = s => s === 'perfect' || s === 'safe' || s === 'purple';
+  const first = Object.keys(states).sort().find(k => k <= TODAY && passed(states[k]));
+  if(!first) return { first:null, success:0, days:0, percent:0 };
+  const keys = rangeKeys(first, TODAY);
+  const success = keys.reduce((sum,k) => sum + (passed(states[k]) ? 1 : 0), 0);
+  return { first:first, success:success, days:keys.length, percent:Math.round(success/keys.length*100) };
+}
+function sinceRateHTML(rate){
+  if(!rate.first) return '<span class="since-rate"><b>—</b><small>Not started</small></span>';
+  const start = new Intl.DateTimeFormat('en-IE',{day:'numeric',month:'short',year:toDate(rate.first).getFullYear()===toDate(TODAY).getFullYear()?undefined:'numeric'}).format(toDate(rate.first));
+  return '<span class="since-rate"><b>'+rate.percent+'%</b><small>'+rate.success+'/'+rate.days+' · from '+start+'</small></span>';
+}
 const monthRange = (y,m) => [ keyOf(new Date(y,m,1)), keyOf(new Date(y,m+1,0)) ];
 const yearRange  = y => [ y+'-01-01', y+'-12-31' ];
 const daysInYear = y => ((y%4===0 && y%100!==0) || y%400===0) ? 366 : 365;
@@ -873,27 +898,28 @@ function totalsHTML(){
 
   const rows = HABITS.map(function(h){
     const M = tally(h.id, mf, mt), Y = tally(h.id, yf, yt), hh = E.h[h.id];
+    const rate = rateSinceFirstGreen(h.id);
     const progress = hh.day[TODAY] === 'purple' ? h.goal : hh.streak;
     const purple = h.reset ? Y.purple+' <span class="pc">/ '+YEARLY_REST_GOAL+'</span>' : '—';
     return '<tr><td><span class="nm">'+sym(h.sym)+h.name+'</span></td>'
       + '<td>'+M.green+' <span class="pc">/ '+elapsed+'</span></td>'
-      + '<td>'+Math.round(M.green/elapsed*100)+'%</td>'
+      + '<td>'+sinceRateHTML(rate)+'</td>'
       + '<td>'+Y.green+' <span class="pc">/ '+daysInYear(VIEW.y)+'</span></td>'
       + '<td class="purple-total">'+purple+'</td>'
       + '<td>'+progress+' <span class="pc">/ '+h.goal+'</span></td><td>'+hh.best+'</td></tr>';
   }).join('');
 
-  const UM = ultraTally(mf, mt), UY = ultraTally(yf, yt);
+  const UM = ultraTally(mf, mt), UY = ultraTally(yf, yt), ultraRate = ultraRateSinceFirstSuccess();
   const purpleGoal = tally('nofap', yf, yt).purple;
   const total = '<tr class="total"><td><span class="nm">'+flame(E.ultra.streak,14)+'Ultra</span></td>'
     + '<td>'+(UM.perfect+UM.safe+UM.purple)+' <span class="pc">/ '+elapsed+'</span></td>'
-    + '<td>'+Math.round((UM.perfect+UM.safe+UM.purple)/elapsed*100)+'%</td>'
+    + '<td>'+sinceRateHTML(ultraRate)+'</td>'
     + '<td>'+(UY.perfect+UY.safe+UY.purple)+' <span class="pc">/ '+daysInYear(VIEW.y)+'</span></td>'
     + '<td class="purple-total">'+purpleGoal+' <span class="pc">/ '+YEARLY_REST_GOAL+'</span></td>'
     + '<td>'+E.ultra.streak+'</td><td>'+E.ultra.best+'</td></tr>';
 
   return '<div class="sec"><h2>Totals</h2><div class="rule"></div><span class="aside">'+mon+' &amp; '+VIEW.y+'</span></div>'
-    + '<div class="table-scroll"><table><thead><tr><th>Habit</th><th>'+mon.slice(0,3)+'</th><th>%</th><th>'+VIEW.y+'</th><th>Purple</th><th>Cycle</th><th>Best</th></tr></thead>'
+    + '<div class="table-scroll"><table><thead><tr><th>Habit</th><th>'+mon.slice(0,3)+'</th><th>Since first green</th><th>'+VIEW.y+'</th><th>Purple</th><th>Cycle</th><th>Best</th></tr></thead>'
     + '<tbody>'+rows+total+'</tbody></table></div>';
 }
 
