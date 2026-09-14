@@ -142,6 +142,8 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .tcard.locked{background:linear-gradient(145deg,rgba(176,108,255,.055),rgba(17,19,25,.96));
   border-color:rgba(176,108,255,.24);border-style:dashed}
 .tcard.locked .flame{opacity:.38;filter:none}
+.tcard.inactive{opacity:.5;filter:saturate(.45)}
+.tcard.inactive .go{background:var(--line);color:var(--dim);cursor:not-allowed}
 .th{display:flex;align-items:center;gap:8px}
 .th b{font-size:13.5px;font-weight:600;letter-spacing:-.005em;flex:1;min-width:0}
 .th b small,.ch b small{display:block;margin-top:2px;color:var(--dim2);font-size:10px;font-weight:550;line-height:1.2}
@@ -177,7 +179,8 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .habit-group+.habit-group{margin-top:18px}
 .habit-group-title{display:flex;align-items:center;gap:9px;margin:0 0 9px;color:var(--dim);font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
 .habit-group-title:after{content:"";height:1px;flex:1;background:var(--line)}
-.today-grid.active{grid-template-columns:repeat(4,minmax(0,1fr))}
+.today-grid.active{grid-template-columns:repeat(3,minmax(0,1fr))}
+.today-grid.inactive-row{margin-top:11px}
 .today-grid.passive{grid-template-columns:repeat(2,minmax(0,1fr));max-width:570px}
 .passive-note{font-size:9px;line-height:1.45;color:var(--dim2)}
 .cheat-count{display:block;margin-top:-5px;color:var(--purple);font-size:9px;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
@@ -200,6 +203,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 /* ---------- calendars ---------- */
 .cals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
 .ccard{border:1px solid var(--line);background:var(--card);border-radius:var(--r);padding:15px}
+.ccard.inactive{opacity:.55}
 .ccard.master{border-color:rgba(231,185,60,.28)}
 .ccard.nutrition-calendar{grid-column:1/-1}
 .ch{display:flex;align-items:center;gap:8px;margin-bottom:13px}
@@ -220,6 +224,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .cell.purple{background:rgba(176,108,255,.2);border-color:rgba(176,108,255,.55);color:#E0C4FF;
   box-shadow:inset 0 0 12px rgba(176,108,255,.12)}
 .cell.locked{background:rgba(176,108,255,.045);border-color:rgba(176,108,255,.1);color:#685779;opacity:.58}
+.cell.paused{opacity:.4}
 .cell.today{box-shadow:0 0 0 1.5px var(--blue)}
 .cell.future{opacity:.25}
 .cell.edit{cursor:pointer}
@@ -252,6 +257,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 /* ---------- totals ---------- */
 table{width:100%;border-collapse:collapse;font-size:13px}
 .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.table-scroll tr.inactive{opacity:.55}
 th{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#6E8398;
   text-align:right;padding:0 0 9px;font-variant-numeric:tabular-nums}
 th:first-child{text-align:left}
@@ -402,6 +408,7 @@ const AVATAR_KEY = 'ultra.avatar.v1';
 const YEARLY_REST_GOAL = 20;
 const SLEEP_LAUNCH = '2026-08-28';
 const PLANNING_LAUNCH = '2026-09-14';
+const HABIT_PAUSE_START = '2026-09-14';
 const PASSIVE_START = '2026-09-01';
 const ROLLOVER_BEFORE_LAUNCH = 4;
 const ROLLOVER_AFTER_LAUNCH = 0;
@@ -412,11 +419,11 @@ const STATE_VERSION = 5;
 const HABITS = [
   { id:'eat',   name:'Eat Well',   sym:'fork',  mode:'active', kind:'eat', goal:365, actions:[{v:1},{v:2}] },
   { id:'plan',  name:'Next Day Planning (Know Your Signal)', displayName:'Next Day Planning<br><small>Know Your Signal</small>', sym:'plan', mode:'active', kind:'strict', goal:365, start:PLANNING_LAUNCH, actions:[{v:2,label:'Done'}] },
-  { id:'read',  name:'Reading',    sym:'book',  mode:'active', kind:'grace', goal:365, actions:[{v:2,label:'Done'}] },
-  { id:'room',  name:'Room Clean', sym:'broom', mode:'active', kind:'grace', goal:365, actions:[{v:2,label:'Done'}] },
   { id:'sleep', name:'Sleep Now!', sym:'moon',  mode:'active', kind:'grace', goal:365, start:SLEEP_LAUNCH, actions:[{v:2,label:'Done',tone:'purple'}] },
   { id:'reels', name:'No Reels',   sym:'phone', mode:'passive', kind:'strict', goal:365, actions:[{v:0,label:'I broke it',tone:'danger'}] },
   { id:'nofap', name:'No Карты + No Погода', displayName:'No Карты<br>+<br>No Погода', sym:'lock', mode:'passive', kind:'strict', goal:14, reset:true, actions:[{v:0,label:'I broke it',tone:'danger'}] },
+  { id:'read',  name:'Reading',    sym:'book',  mode:'active', kind:'grace', goal:365, pausedFrom:HABIT_PAUSE_START, actions:[{v:2,label:'Done'}] },
+  { id:'room',  name:'Room Clean', sym:'broom', mode:'active', kind:'grace', goal:365, pausedFrom:HABIT_PAUSE_START, actions:[{v:2,label:'Done'}] },
 ];
 
 /* line symbols, drawn rather than emoji */
@@ -601,6 +608,7 @@ function evaluate(){
 
     keys.forEach(function(k){
       if(h.start && k < h.start){ day[k] = 'locked'; return; }
+      if(h.pausedFrom && k >= h.pausedFrom){ day[k] = 'paused'; streak = 0; skips = 0; return; }
       if(h.reset && streak >= h.goal){
         day[k] = 'purple';
         streak = 0; skips = 0; rests++;
@@ -640,7 +648,7 @@ function evaluate(){
     let active = 0, broken = false, pend = false, allGreen = true, allPurple = true;
     HABITS.forEach(function(h){
       const s = H[h.id].day[k];
-      if(s === 'locked') return;
+      if(s === 'locked' || s === 'paused') return;
       active++;
       if(s === 'red' || s === 'off') broken = true;
       else if(s === 'pending'){ pend = true; allGreen = false; }
@@ -691,7 +699,7 @@ function rateSinceFirstGreen(hid){
   const states = E.h[hid].day;
   const first = Object.keys(states).sort().find(k => k <= TODAY && states[k] === 'green');
   if(!first) return { first:null, success:0, days:0, percent:0 };
-  const keys = rangeKeys(first, TODAY);
+  const keys = rangeKeys(first, TODAY).filter(k => states[k] !== 'paused');
   const success = keys.reduce((sum,k) => sum + (states[k] === 'green' ? 1 : 0), 0);
   return { first:first, success:success, days:keys.length, percent:Math.round(success/keys.length*100) };
 }
@@ -750,7 +758,7 @@ function ultraHTML(){
 }
 
 function todayHTML(){
-  const warn = HABITS.filter(h => E.h[h.id].warned && E.h[h.id].day[TODAY] !== 'green').map(h => h.name);
+  const warn = HABITS.filter(h => E.h[h.id].warned && E.h[h.id].day[TODAY] !== 'green' && E.h[h.id].day[TODAY] !== 'paused').map(h => h.name);
   const note = warn.length
     ? '<div class="note">Buffer already used yesterday — '+warn.join(', ')+' must go green today.</div>' : '';
 
@@ -759,10 +767,11 @@ function todayHTML(){
     const hh = E.h[h.id], v = h.id === 'eat' ? nutritionValue(TODAY) : S.log[h.id][TODAY];
     const isRest = hh.day[TODAY] === 'purple';
     const isLocked = hh.day[TODAY] === 'locked';
-    const progress = isRest ? h.goal : hh.streak;
+    const isPaused = hh.day[TODAY] === 'paused';
+    const progress = isPaused ? 0 : isRest ? h.goal : hh.streak;
     const changed = MOTION && MOTION.type === 'habit' && MOTION.hid === h.id && MOTION.k === TODAY;
-    const cls = (isLocked ? 'locked' : isRest ? 'rest' : v === 2 ? 'done' : v === 1 ? 'part' : v === 0 ? 'broken' : '') + (changed ? ' changed' : '');
-    let btns = isLocked
+    const cls = (isPaused ? 'inactive' : isLocked ? 'locked' : isRest ? 'rest' : v === 2 ? 'done' : v === 1 ? 'part' : v === 0 ? 'broken' : '') + (changed ? ' changed' : '');
+    let btns = isPaused ? '<button class="go" disabled>Paused</button>' : isLocked
       ? '<button class="go launch-lock" disabled>Unlocks in<b class="num" id="sleepCountdown">'+launchCountdown()+'</b></button>'
       : isRest ? '<div class="rest-day">'+(h.reset?'Cheat day':'Relax day')+'</div>' : h.actions.map(function(a){
       return '<button class="go'+(a.tone==='purple'?' purple':'')+(a.tone==='danger'?' danger':'')+(v===a.v ? ' on'+(a.tone==='amber'?' amber':'') : '')
@@ -777,7 +786,8 @@ function todayHTML(){
         + '<button class="nutrition-save" type="submit">Save totals</button></form>';
     }
     let hint = '<span class="hint dim">Not logged</span>';
-    if(isLocked) hint = '<span class="hint launch">Arrives 28 August 2026</span>';
+    if(isPaused) hint = '<span class="hint dim">Inactive for now</span>';
+    else if(isLocked) hint = '<span class="hint launch">Arrives 28 August 2026</span>';
     else if(isRest) hint = '<span class="hint purple">'+(h.reset?'Cheat day — resets tomorrow':'Purple earned — reset tomorrow')+'</span>';
     else if(h.mode === 'passive' && v === 0) hint = '<span class="hint red">Broken today</span>';
     else if(h.mode === 'passive') hint = '';
@@ -799,11 +809,13 @@ function todayHTML(){
       + '<div class="btns">'+btns+'</div></div>';
   });
 
-  const active = HABITS.filter(h => h.mode !== 'passive').map(h => cards[h.id]).join('');
+  const active = HABITS.filter(h => h.mode !== 'passive' && E.h[h.id].day[TODAY] !== 'paused').map(h => cards[h.id]).join('');
+  const inactive = HABITS.filter(h => h.mode !== 'passive' && E.h[h.id].day[TODAY] === 'paused').map(h => cards[h.id]).join('');
   const passive = HABITS.filter(h => h.mode === 'passive').map(h => cards[h.id]).join('');
 
   return '<div class="sec"><h2>Today</h2><div class="rule"></div><span class="aside">'+pretty(TODAY)+'</span></div>'
-    + '<section class="habit-group"><h3 class="habit-group-title">Active habits</h3><div class="today-grid active">'+active+'</div></section>'
+    + '<section class="habit-group"><h3 class="habit-group-title">Active habits</h3><div class="today-grid active">'+active+'</div>'
+    + (inactive ? '<div class="today-grid active inactive-row">'+inactive+'</div>' : '')+'</section>'
     + '<section class="habit-group"><h3 class="habit-group-title">Passive habits</h3><div class="today-grid passive">'+passive+'</div><p class="passive-note">These count automatically when the day closes. Press the button only if you broke the habit.</p></section>' + note;
 }
 
@@ -813,12 +825,12 @@ function calHTML(hid){
   let c = DW.map(d => '<div class="dw">'+d+'</div>').join('');
   for(let i=0;i<lead;i++) c += '<div class="cell blank"></div>';
   const MAP = hid
-    ? { green:'green', amber:'amber', purple:'purple', locked:'locked', red:'red', pending:'', off:'', future:'future' }
+    ? { green:'green', amber:'amber', purple:'purple', locked:'locked', paused:'paused', red:'red', pending:'', off:'', future:'future' }
     : { perfect:'gold', safe:'blue', purple:'purple', broken:'red', pending:'', off:'', future:'future' };
   for(let d=1; d<=dim; d++){
     const k = keyOf(new Date(VIEW.y, VIEW.m, d));
     const st = k > TODAY ? 'future' : (hid ? (E.h[hid].day[k] || 'off') : (E.ultra.day[k] || 'off'));
-    const ed = hid && editable(k) && st !== 'purple' && st !== 'locked';
+    const ed = hid && editable(k) && st !== 'purple' && st !== 'locked' && st !== 'paused';
     const changed = MOTION && MOTION.type === 'calendar' && MOTION.hid === hid && MOTION.k === k;
     const n = hid === 'eat' && S.nutrition ? S.nutrition[k] : null;
     const calories = n && Number(n.calories), protein = n && Number(n.protein);
@@ -859,14 +871,14 @@ function calsHTML(){
     const M = tally(h.id, mf, mt), W = tally(h.id, wf, wt), Y = tally(h.id, yf, yt);
     const isRest = E.h[h.id].day[TODAY] === 'purple';
     const isLocked = E.h[h.id].day[TODAY] === 'locked';
-    const progress = isRest ? h.goal : E.h[h.id].streak;
+    const progress = E.h[h.id].day[TODAY] === 'paused' ? 0 : isRest ? h.goal : E.h[h.id].streak;
     const yearStat = isLocked
       ? '<span class="launch-stat"><b>28 Aug</b> start</span>'
       : h.reset
       ? '<span class="rest-count"><b>'+Y.purple+'</b>/'+YEARLY_REST_GOAL+' purple</span>'
       : '<span><b>'+Y.green+'</b>/'+h.goal+' yr</span>';
     const changed = MOTION && MOTION.type === 'calendar' && MOTION.hid === h.id;
-    return '<div class="ccard'+(h.id === 'eat' ? ' nutrition-calendar' : '')+'">'
+    return '<div class="ccard'+(h.id === 'eat' ? ' nutrition-calendar' : '')+(E.h[h.id].day[TODAY] === 'paused' ? ' inactive' : '')+'">'
       + '<div class="ch">'+sym(h.sym)+'<b>'+(h.displayName || h.name)+'</b>'
       +   '<span class="n">'+flame(progress, 18, changed, isRest)+'<span class="num">'+progress+'</span><span class="cycle-goal">/'+h.goal+'</span></span></div>'
       + calHTML(h.id)
@@ -905,7 +917,7 @@ function totalsHTML(){
     const rate = rateSinceFirstGreen(h.id);
     const progress = hh.day[TODAY] === 'purple' ? h.goal : hh.streak;
     const purple = h.reset ? Y.purple+' <span class="pc">/ '+YEARLY_REST_GOAL+'</span>' : '—';
-    return '<tr><td><span class="nm">'+sym(h.sym)+h.name+'</span></td>'
+    return '<tr'+(hh.day[TODAY] === 'paused' ? ' class="inactive"' : '')+'><td><span class="nm">'+sym(h.sym)+h.name+'</span></td>'
       + '<td>'+M.green+' <span class="pc">/ '+elapsed+'</span></td>'
       + '<td>'+sinceRateHTML(rate)+'</td>'
       + '<td>'+Y.green+' <span class="pc">/ '+daysInYear(VIEW.y)+'</span></td>'
@@ -1221,6 +1233,7 @@ document.addEventListener('click', function(e){
   const go = e.target.closest('[data-h]');
   if(go){
     const before = E.ultra.streak, hid = go.dataset.h, k = go.dataset.k, v = +go.dataset.v;
+    if(E.h[hid] && E.h[hid].day[k] === 'paused') return;
     MOTION = { type:'habit', hid:hid, k:k, v:v };
     if(S.log[hid][k] === v) delete S.log[hid][k]; else S.log[hid][k] = v;
     commit(before); return;
@@ -1230,7 +1243,7 @@ document.addEventListener('click', function(e){
   if(cyc){                                   // click a day to step through its states
     const before = E.ultra.streak;
     const h = HABITS.find(x => x.id === cyc.dataset.cyc), k = cyc.dataset.k;
-    if(!editable(k)) return;
+    if(!h || !editable(k) || E.h[h.id].day[k] === 'paused') return;
     if(h.id === 'eat'){
       NUTRITION_DAY = k; render();
       setTimeout(function(){
