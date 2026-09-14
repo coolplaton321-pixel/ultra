@@ -144,6 +144,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .tcard.locked .flame{opacity:.38;filter:none}
 .th{display:flex;align-items:center;gap:8px}
 .th b{font-size:13.5px;font-weight:600;letter-spacing:-.005em;flex:1;min-width:0}
+.th b small,.ch b small{display:block;margin-top:2px;color:var(--dim2);font-size:10px;font-weight:550;line-height:1.2}
 .th .n{display:flex;align-items:center;gap:5px;font-size:17px;font-weight:700;letter-spacing:-.02em;flex:none}
 .cycle-goal{font-size:.62em;color:var(--dim);letter-spacing:0;margin-left:-3px}
 .btns{display:flex;flex-direction:column;gap:6px;margin-top:auto}
@@ -400,15 +401,17 @@ const KEY = 'ultra.streaks.v1';
 const AVATAR_KEY = 'ultra.avatar.v1';
 const YEARLY_REST_GOAL = 20;
 const SLEEP_LAUNCH = '2026-08-28';
+const PLANNING_LAUNCH = '2026-09-14';
 const PASSIVE_START = '2026-09-01';
 const ROLLOVER_BEFORE_LAUNCH = 4;
 const ROLLOVER_AFTER_LAUNCH = 0;
-const STATE_VERSION = 4;
+const STATE_VERSION = 5;
 
 // mode: active = user confirms it | passive = succeeds unless a break is logged
 // kind: strict = no buffer | grace = one missed day allowed | eat = graded
 const HABITS = [
   { id:'eat',   name:'Eat Well',   sym:'fork',  mode:'active', kind:'eat', goal:365, actions:[{v:1},{v:2}] },
+  { id:'plan',  name:'Next Day Planning (Know Your Signal)', displayName:'Next Day Planning<br><small>Know Your Signal</small>', sym:'plan', mode:'active', kind:'strict', goal:365, start:PLANNING_LAUNCH, actions:[{v:2,label:'Done'}] },
   { id:'read',  name:'Reading',    sym:'book',  mode:'active', kind:'grace', goal:365, actions:[{v:2,label:'Done'}] },
   { id:'room',  name:'Room Clean', sym:'broom', mode:'active', kind:'grace', goal:365, actions:[{v:2,label:'Done'}] },
   { id:'sleep', name:'Sleep Now!', sym:'moon',  mode:'active', kind:'grace', goal:365, start:SLEEP_LAUNCH, actions:[{v:2,label:'Done',tone:'purple'}] },
@@ -422,6 +425,7 @@ const SYM = {
   lock: '<rect x="4.6" y="10.4" width="14.8" height="10.6" rx="2.2"/><path d="M8.1 10.4V7.6a3.9 3.9 0 0 1 7.8 0v2.8"/>',
   broom:'<path d="M12 3v9"/><path d="M8 12h8l1.6 8H6.4z"/><path d="M12 12.6v7"/>',
   fork: '<path d="M5.2 3v5.1a2.2 2.2 0 0 0 4.4 0V3"/><path d="M7.4 10.3V21"/><path d="M16.6 3v18"/><path d="M16.6 3c2.3 1.3 2.9 4 2.3 6.5-.3 1.2-1.2 1.9-2.3 1.9"/>',
+  plan: '<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 9h16M8 14l2 2 5-5"/>',
   book: '<path d="M12 6.6v13"/><path d="M12 6.6C10.1 5.1 7.4 4.6 3.8 4.9v12.6c3.6-.3 6.3.2 8.2 1.7"/><path d="M12 6.6c1.9-1.5 4.6-2 8.2-1.7v12.6c-3.6-.3-6.3.2-8.2 1.7"/>',
   moon: '<path d="M20.2 15.2A8.7 8.7 0 0 1 8.8 3.8 8.7 8.7 0 1 0 20.2 15.2z"/>'
 };
