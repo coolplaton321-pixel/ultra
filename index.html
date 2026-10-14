@@ -179,10 +179,8 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,9,14,.93);
 .habit-group+.habit-group{margin-top:18px}
 .habit-group-title{display:flex;align-items:center;gap:9px;margin:0 0 9px;color:var(--dim);font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
 .habit-group-title:after{content:"";height:1px;flex:1;background:var(--line)}
-.today-grid.active{grid-template-columns:repeat(3,minmax(0,1fr))}
-.today-grid.inactive-row{margin-top:11px}
-.today-grid.passive{grid-template-columns:repeat(2,minmax(0,1fr));max-width:570px}
-.passive-note{font-size:9px;line-height:1.45;color:var(--dim2)}
+.today-grid.active{grid-template-columns:repeat(5,minmax(0,1fr))}
+.today-grid.avoidance{grid-template-columns:repeat(3,minmax(0,1fr));max-width:860px}
 .cheat-count{display:block;margin-top:-5px;color:var(--purple);font-size:9px;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
 .nutrition-form{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:auto}
 .nutrition-field{display:grid;gap:4px;color:var(--dim);font-size:8px;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
@@ -277,6 +275,7 @@ details{margin-top:34px;border-top:1px solid var(--line);padding-top:16px}
 summary{font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--dim2);cursor:pointer;list-style:none}
 summary::-webkit-details-marker{display:none}
 summary:hover{color:var(--blue)}
+.habit-history .cals,.habit-history .table-scroll{margin-top:16px}
 .dwrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
 textarea{width:100%;height:110px;border-radius:8px;background:#0C0E14;border:1px solid var(--line2);color:var(--dim);
   padding:10px;font-size:10.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
@@ -354,7 +353,7 @@ textarea{width:100%;height:110px;border-radius:8px;background:#0C0E14;border:1px
 }
 @media(max-width:720px){
   .wrap{padding:0 16px 48px}.hin{padding:12px 16px;gap:12px}
-  .cals{grid-template-columns:1fr}.today-grid,.today-grid.active,.today-grid.passive{grid-template-columns:1fr;max-width:none}
+  .cals{grid-template-columns:1fr}.today-grid,.today-grid.active,.today-grid.avoidance{grid-template-columns:1fr;max-width:none}
   .nutrition-calendar .cal{gap:3px}.nutrition-calendar .cell{min-height:54px;padding:5px 3px}
   .nutrition-day-stats{font-size:7px}.nutrition-day-stats b{font-size:7.5px}.nutrition-day-stats .protein-label{display:none}
   .nutrition-history-editor{grid-template-columns:1fr 1fr}.nutrition-edit-title{grid-column:1/-1}
@@ -409,25 +408,41 @@ const YEARLY_REST_GOAL = 20;
 const SLEEP_LAUNCH = '2026-08-28';
 const PLANNING_LAUNCH = '2026-09-14';
 const HABIT_PAUSE_START = '2026-09-14';
+const HABIT_REFRESH = '2026-10-14';
 const PASSIVE_START = '2026-09-01';
 const ROLLOVER_BEFORE_LAUNCH = 4;
 const ROLLOVER_AFTER_LAUNCH = 0;
-const STATE_VERSION = 5;
+const STATE_VERSION = 6;
 
 // mode: active = user confirms it | passive = succeeds unless a break is logged
 // kind: strict = no buffer | grace = one missed day allowed | eat = graded
 const HABITS = [
-  { id:'eat',   name:'Eat Well',   sym:'fork',  mode:'active', kind:'eat', goal:365, actions:[{v:1},{v:2}] },
-  { id:'plan',  name:'Next Day Planning (Know Your Signal)', displayName:'Next Day Planning<br><small>Know Your Signal</small>', sym:'plan', mode:'active', kind:'strict', goal:365, start:PLANNING_LAUNCH, actions:[{v:2,label:'Done'}] },
-  { id:'sleep', name:'Sleep Now!', sym:'moon',  mode:'active', kind:'grace', goal:365, start:SLEEP_LAUNCH, actions:[{v:2,label:'Done',tone:'purple'}] },
-  { id:'reels', name:'No Reels',   sym:'phone', mode:'passive', kind:'strict', goal:365, actions:[{v:0,label:'I broke it',tone:'danger'}] },
-  { id:'nofap', name:'No Карты + No Погода', displayName:'No Карты<br>+<br>No Погода', sym:'lock', mode:'passive', kind:'strict', goal:14, reset:true, actions:[{v:0,label:'I broke it',tone:'danger'}] },
-  { id:'read',  name:'Reading',    sym:'book',  mode:'active', kind:'grace', goal:365, pausedFrom:HABIT_PAUSE_START, actions:[{v:2,label:'Done'}] },
-  { id:'room',  name:'Room Clean', sym:'broom', mode:'active', kind:'grace', goal:365, pausedFrom:HABIT_PAUSE_START, actions:[{v:2,label:'Done'}] },
+  { id:'fyp', name:'FYP Project Work', sym:'project', mode:'active', kind:'strict', goal:365, start:HABIT_REFRESH, actions:[{v:2,label:'Done'}] },
+  { id:'maths', name:'Maths', sym:'maths', mode:'active', kind:'strict', goal:365, start:HABIT_REFRESH, actions:[{v:2,label:'Done'}] },
+  { id:'driving', name:'Driving', sym:'car', mode:'active', kind:'strict', goal:365, start:HABIT_REFRESH, actions:[{v:2,label:'Done'}] },
+  { id:'masters', name:'Masters', sym:'cap', mode:'active', kind:'strict', goal:365, start:HABIT_REFRESH, actions:[{v:2,label:'Done'}] },
+  { id:'shake', name:'Protein + Creatine Shake', sym:'shake', mode:'active', kind:'strict', goal:365, start:HABIT_REFRESH, actions:[{v:2,label:'Done'}] },
+  { id:'nofap', name:'No Cards + No Weather', displayName:'No Cards<br>+ No Weather', sym:'lock', mode:'active', passiveBefore:HABIT_REFRESH, row:'avoidance', kind:'strict', goal:14, reset:true, actions:[{v:2,label:'Done'}] },
+  { id:'reels', name:'No Reels', sym:'phone', mode:'active', passiveBefore:HABIT_REFRESH, row:'avoidance', kind:'strict', goal:365, actions:[{v:2,label:'Done'}] },
+  { id:'sober', name:'No Alcohol + No Nicotine', displayName:'No Alcohol<br>+ No Nicotine', sym:'shield', mode:'active', row:'avoidance', kind:'strict', goal:365, start:HABIT_REFRESH, actions:[{v:2,label:'Done'}] },
+  { id:'eat', name:'Eat Well', sym:'fork', mode:'active', kind:'eat', goal:365, retiredFrom:HABIT_REFRESH, actions:[{v:1},{v:2}] },
+  { id:'plan', name:'Next Day Planning (Know Your Signal)', displayName:'Next Day Planning<br><small>Know Your Signal</small>', sym:'plan', mode:'active', kind:'strict', goal:365, start:PLANNING_LAUNCH, retiredFrom:HABIT_REFRESH, actions:[{v:2,label:'Done'}] },
+  { id:'sleep', name:'Sleep Now!', sym:'moon', mode:'active', kind:'grace', goal:365, start:SLEEP_LAUNCH, retiredFrom:HABIT_REFRESH, actions:[{v:2,label:'Done',tone:'purple'}] },
+  { id:'read', name:'Reading', sym:'book', mode:'active', kind:'grace', goal:365, pausedFrom:HABIT_PAUSE_START, retiredFrom:HABIT_REFRESH, actions:[{v:2,label:'Done'}] },
+  { id:'room', name:'Room Clean', sym:'broom', mode:'active', kind:'grace', goal:365, pausedFrom:HABIT_PAUSE_START, retiredFrom:HABIT_REFRESH, actions:[{v:2,label:'Done'}] },
 ];
+const retired = h => h.retiredFrom && TODAY >= h.retiredFrom;
+const modeOn = (h,k) => h.passiveBefore && k < h.passiveBefore ? 'passive' : h.mode;
+const excludedDay = s => s === 'locked' || s === 'paused' || s === 'retired';
 
 /* line symbols, drawn rather than emoji */
 const SYM = {
+  shield:'<path d="M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/>',
+  project:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M7 9l3 3 7-5"/>',
+  maths:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2"/>',
+  car:'<path d="M5 10l2-5h10l2 5M4 10h16v8H4zM6 18v3M18 18v3M7 14h2M15 14h2"/>',
+  cap:'<path d="M2 8l10-5 10 5-10 5zM6 10v6c4 3 8 3 12 0v-6M22 8v8"/>',
+  shake:'<path d="M7 7h10l-1 14H8zM8 3h8v4M10 11h4M10 15h4"/>',
   phone:'<rect x="6" y="2.6" width="12" height="18.8" rx="2.6"/><path d="M10.4 5.6h3.2"/><path d="M3.6 20.4 20.4 3.6"/>',
   lock: '<rect x="4.6" y="10.4" width="14.8" height="10.6" rx="2.2"/><path d="M8.1 10.4V7.6a3.9 3.9 0 0 1 7.8 0v2.8"/>',
   broom:'<path d="M12 3v9"/><path d="M8 12h8l1.6 8H6.4z"/><path d="M12 12.6v7"/>',
@@ -582,8 +597,8 @@ function loadAvatar(){
                purple (automatic relax day after 14 progress days)
                red (the day it broke) | off (no live chain)
                pending (today, not logged yet)
-   Active habits need confirmation. Passive habits count automatically from
-   1 September 2026 unless the user records a break.
+   Active habits need confirmation. Preserve the earlier automatic records
+   for avoidance habits before the October refresh.
    ========================================================= */
 let E = null;
 function nutritionValue(k){
@@ -608,6 +623,7 @@ function evaluate(){
 
     keys.forEach(function(k){
       if(h.start && k < h.start){ day[k] = 'locked'; return; }
+      if(h.retiredFrom && k >= h.retiredFrom){ day[k] = 'retired'; return; }
       if(h.pausedFrom && k >= h.pausedFrom){ day[k] = 'paused'; streak = 0; skips = 0; return; }
       if(h.reset && streak >= h.goal){
         day[k] = 'purple';
@@ -618,7 +634,7 @@ function evaluate(){
       if(v === undefined && k === TODAY){ day[k] = 'pending'; return; }   // only today is still open
 
       if(h.kind === 'strict'){
-        const automatic = h.mode === 'passive' && k >= PASSIVE_START;
+        const automatic = modeOn(h,k) === 'passive' && k >= PASSIVE_START;
         if(v === 2 || (automatic && v !== 0)){ streak++; day[k] = 'green'; }
         else { day[k] = streak > 0 ? 'red' : 'off'; streak = 0; }
 
@@ -648,7 +664,7 @@ function evaluate(){
     let active = 0, broken = false, pend = false, allGreen = true, allPurple = true;
     HABITS.forEach(function(h){
       const s = H[h.id].day[k];
-      if(s === 'locked' || s === 'paused') return;
+      if(excludedDay(s)) return;
       active++;
       if(s === 'red' || s === 'off') broken = true;
       else if(s === 'pending'){ pend = true; allGreen = false; }
@@ -699,7 +715,7 @@ function rateSinceFirstGreen(hid){
   const states = E.h[hid].day;
   const first = Object.keys(states).sort().find(k => k <= TODAY && states[k] === 'green');
   if(!first) return { first:null, success:0, days:0, percent:0 };
-  const keys = rangeKeys(first, TODAY).filter(k => states[k] !== 'paused');
+  const keys = rangeKeys(first, TODAY).filter(k => !excludedDay(states[k]));
   const success = keys.reduce((sum,k) => sum + (states[k] === 'green' ? 1 : 0), 0);
   return { first:first, success:success, days:keys.length, percent:Math.round(success/keys.length*100) };
 }
@@ -736,7 +752,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 
 function render(){
   evaluate();
+  const openHistory = Array.from(document.querySelectorAll('details.habit-history[open]')).map(el => el.dataset.history);
   $('#app').innerHTML = ultraHTML() + todayHTML() + calsHTML() + totalsHTML() + dataHTML();
+  openHistory.forEach(id => { const el = document.querySelector('details[data-history="'+id+'"]'); if(el) el.open = true; });
   $('#hstreak').innerHTML = flame(E.ultra.streak, 17) + '<span class="num">'+E.ultra.streak+'</span>';
   paintClock();
   paintCloud();
@@ -758,12 +776,13 @@ function ultraHTML(){
 }
 
 function todayHTML(){
-  const warn = HABITS.filter(h => E.h[h.id].warned && E.h[h.id].day[TODAY] !== 'green' && E.h[h.id].day[TODAY] !== 'paused').map(h => h.name);
+  const current = HABITS.filter(h => !retired(h));
+  const warn = current.filter(h => E.h[h.id].warned && E.h[h.id].day[TODAY] !== 'green' && !excludedDay(E.h[h.id].day[TODAY])).map(h => h.name);
   const note = warn.length
     ? '<div class="note">Buffer already used yesterday — '+warn.join(', ')+' must go green today.</div>' : '';
 
   const cards = {};
-  HABITS.forEach(function(h){
+  current.forEach(function(h){
     const hh = E.h[h.id], v = h.id === 'eat' ? nutritionValue(TODAY) : S.log[h.id][TODAY];
     const isRest = hh.day[TODAY] === 'purple';
     const isLocked = hh.day[TODAY] === 'locked';
@@ -809,14 +828,12 @@ function todayHTML(){
       + '<div class="btns">'+btns+'</div></div>';
   });
 
-  const active = HABITS.filter(h => h.mode !== 'passive' && E.h[h.id].day[TODAY] !== 'paused').map(h => cards[h.id]).join('');
-  const inactive = HABITS.filter(h => h.mode !== 'passive' && E.h[h.id].day[TODAY] === 'paused').map(h => cards[h.id]).join('');
-  const passive = HABITS.filter(h => h.mode === 'passive').map(h => cards[h.id]).join('');
+  const active = current.filter(h => h.row !== 'avoidance').map(h => cards[h.id]).join('');
+  const avoidance = current.filter(h => h.row === 'avoidance').map(h => cards[h.id]).join('');
 
   return '<div class="sec"><h2>Today</h2><div class="rule"></div><span class="aside">'+pretty(TODAY)+'</span></div>'
-    + '<section class="habit-group"><h3 class="habit-group-title">Active habits</h3><div class="today-grid active">'+active+'</div>'
-    + (inactive ? '<div class="today-grid active inactive-row">'+inactive+'</div>' : '')+'</section>'
-    + '<section class="habit-group"><h3 class="habit-group-title">Passive habits</h3><div class="today-grid passive">'+passive+'</div><p class="passive-note">These count automatically when the day closes. Press the button only if you broke the habit.</p></section>' + note;
+    + '<section class="habit-group"><h3 class="habit-group-title">Active habits</h3><div class="today-grid active">'+active+'</div></section>'
+    + '<section class="habit-group"><div class="today-grid avoidance">'+avoidance+'</div></section>' + note;
 }
 
 function calHTML(hid){
@@ -825,12 +842,12 @@ function calHTML(hid){
   let c = DW.map(d => '<div class="dw">'+d+'</div>').join('');
   for(let i=0;i<lead;i++) c += '<div class="cell blank"></div>';
   const MAP = hid
-    ? { green:'green', amber:'amber', purple:'purple', locked:'locked', paused:'paused', red:'red', pending:'', off:'', future:'future' }
+    ? { green:'green', amber:'amber', purple:'purple', locked:'locked', paused:'paused', retired:'paused', red:'red', pending:'', off:'', future:'future' }
     : { perfect:'gold', safe:'blue', purple:'purple', broken:'red', pending:'', off:'', future:'future' };
   for(let d=1; d<=dim; d++){
     const k = keyOf(new Date(VIEW.y, VIEW.m, d));
     const st = k > TODAY ? 'future' : (hid ? (E.h[hid].day[k] || 'off') : (E.ultra.day[k] || 'off'));
-    const ed = hid && editable(k) && st !== 'purple' && st !== 'locked' && st !== 'paused';
+    const ed = hid && editable(k) && st !== 'purple' && !excludedDay(st);
     const changed = MOTION && MOTION.type === 'calendar' && MOTION.hid === hid && MOTION.k === k;
     const n = hid === 'eat' && S.nutrition ? S.nutrition[k] : null;
     const calories = n && Number(n.calories), protein = n && Number(n.protein);
@@ -867,7 +884,8 @@ function calsHTML(){
   const mon = MONTHS[VIEW.m].slice(0,3);
   const atNow = VIEW.y === toDate(TODAY).getFullYear() && VIEW.m === toDate(TODAY).getMonth();
 
-  const cards = HABITS.map(function(h){
+  const cards = {}, archived = [];
+  HABITS.forEach(function(h){
     const M = tally(h.id, mf, mt), W = tally(h.id, wf, wt), Y = tally(h.id, yf, yt);
     const isRest = E.h[h.id].day[TODAY] === 'purple';
     const isLocked = E.h[h.id].day[TODAY] === 'locked';
@@ -878,7 +896,7 @@ function calsHTML(){
       ? '<span class="rest-count"><b>'+Y.purple+'</b>/'+YEARLY_REST_GOAL+' purple</span>'
       : '<span><b>'+Y.green+'</b>/'+h.goal+' yr</span>';
     const changed = MOTION && MOTION.type === 'calendar' && MOTION.hid === h.id;
-    return '<div class="ccard'+(h.id === 'eat' ? ' nutrition-calendar' : '')+(E.h[h.id].day[TODAY] === 'paused' ? ' inactive' : '')+'">'
+    const card = '<div class="ccard'+(h.id === 'eat' ? ' nutrition-calendar' : '')+(E.h[h.id].day[TODAY] === 'paused' ? ' inactive' : '')+'">'
       + '<div class="ch">'+sym(h.sym)+'<b>'+(h.displayName || h.name)+'</b>'
       +   '<span class="n">'+flame(progress, 18, changed, isRest)+'<span class="num">'+progress+'</span><span class="cycle-goal">/'+h.goal+'</span></span></div>'
       + calHTML(h.id)
@@ -886,7 +904,8 @@ function calsHTML(){
       + '<div class="cstat"><span><b>'+M.green+'</b>/'+dim+' '+mon+'</span>'
       +   '<span><b>'+W.green+'</b>/7 week</span>'+yearStat+'</div>'
       + '</div>';
-  }).join('');
+    if(retired(h)) archived.push(card); else cards[h.id] = card;
+  });
 
   const U = ultraTally(mf, mt);
   const master = '<div class="ccard master">'
@@ -902,8 +921,9 @@ function calsHTML(){
     + '<div class="mnav"><button data-step="-1" aria-label="Previous month">‹</button>'
     +   '<b>'+MONTHS[VIEW.m]+' '+VIEW.y+'</b>'
     +   '<button data-step="1" aria-label="Next month" '+(atNow?'disabled':'')+'>›</button></div></div>'
-    + '<section class="cals">'+cards+master+'</section>'
-    + '<p class="calhelp">Click any Eat Well day to add or edit calories and protein. Other past days can be corrected by clicking them. Passive habits count automatically from 1 September unless marked as broken.</p>';
+    + '<section class="cals">'+Object.values(cards).join('')+master+'</section>'
+    + '<p class="calhelp">Press Done to log each habit. Click a past day to correct it.</p>'
+    + (archived.length ? '<details class="habit-history" data-history="calendars"><summary>Previous habits — calendars</summary><section class="cals">'+archived.join('')+'</section></details>' : '');
 }
 
 function totalsHTML(){
@@ -912,18 +932,20 @@ function totalsHTML(){
   const elapsed = rangeKeys(mf, mt).length || 1;
   const mon = MONTHS[VIEW.m];
 
-  const rows = HABITS.map(function(h){
+  const rows = [], archived = [];
+  HABITS.forEach(function(h){
     const M = tally(h.id, mf, mt), Y = tally(h.id, yf, yt), hh = E.h[h.id];
     const rate = rateSinceFirstGreen(h.id);
     const progress = hh.day[TODAY] === 'purple' ? h.goal : hh.streak;
     const purple = h.reset ? Y.purple+' <span class="pc">/ '+YEARLY_REST_GOAL+'</span>' : '—';
-    return '<tr'+(hh.day[TODAY] === 'paused' ? ' class="inactive"' : '')+'><td><span class="nm">'+sym(h.sym)+h.name+'</span></td>'
+    const row = '<tr'+(hh.day[TODAY] === 'paused' ? ' class="inactive"' : '')+'><td><span class="nm">'+sym(h.sym)+h.name+'</span></td>'
       + '<td>'+M.green+' <span class="pc">/ '+elapsed+'</span></td>'
       + '<td>'+sinceRateHTML(rate)+'</td>'
       + '<td>'+Y.green+' <span class="pc">/ '+daysInYear(VIEW.y)+'</span></td>'
       + '<td class="purple-total">'+purple+'</td>'
       + '<td>'+progress+' <span class="pc">/ '+h.goal+'</span></td><td>'+hh.best+'</td></tr>';
-  }).join('');
+    (retired(h) ? archived : rows).push(row);
+  });
 
   const UM = ultraTally(mf, mt), UY = ultraTally(yf, yt), ultraRate = ultraRateSinceFirstSuccess();
   const purpleGoal = tally('nofap', yf, yt).purple;
@@ -934,13 +956,14 @@ function totalsHTML(){
     + '<td class="purple-total">'+purpleGoal+' <span class="pc">/ '+YEARLY_REST_GOAL+'</span></td>'
     + '<td>'+E.ultra.streak+'</td><td>'+E.ultra.best+'</td></tr>';
 
+  const table = contents => '<div class="table-scroll"><table><thead><tr><th>Habit</th><th>'+mon.slice(0,3)+'</th><th>Since first green</th><th>'+VIEW.y+'</th><th>Purple</th><th>Cycle</th><th>Best</th></tr></thead><tbody>'+contents+'</tbody></table></div>';
   return '<div class="sec"><h2>Totals</h2><div class="rule"></div><span class="aside">'+mon+' &amp; '+VIEW.y+'</span></div>'
-    + '<div class="table-scroll"><table><thead><tr><th>Habit</th><th>'+mon.slice(0,3)+'</th><th>Since first green</th><th>'+VIEW.y+'</th><th>Purple</th><th>Cycle</th><th>Best</th></tr></thead>'
-    + '<tbody>'+rows+total+'</tbody></table></div>';
+    + table(rows.join('')+total)
+    + (archived.length ? '<details class="habit-history" data-history="totals"><summary>Previous habits — totals</summary>'+table(archived.join(''))+'</details>' : '');
 }
 
 function dataHTML(){
-  return '<details><summary>Data &amp; backup</summary><div class="dwrap">'
+  return '<details class="data-backup"><summary>Data &amp; backup</summary><div class="dwrap">'
     + '<div><div class="dlbl">Export — copy this somewhere safe</div>'
     +   '<textarea id="exp" readonly>'+esc(JSON.stringify(S))+'</textarea>'
     +   '<button class="dbtn" id="copy">Copy</button></div>'
@@ -1140,6 +1163,7 @@ setInterval(function(){
 }, 1000);
 setInterval(function(){ if(cloudUser && !document.hidden) syncCloud(); }, 60000);
 window.addEventListener('focus', function(){ if(cloudUser) syncCloud(); });
+window.addEventListener('online', function(){ if(cloudUser) syncCloud(); });
 
 /* =========================================================
    INPUT
@@ -1197,6 +1221,7 @@ document.addEventListener('submit', function(e){
     toast('Enter valid calories and protein'); return;
   }
   const before = E.ultra.streak, k = form.dataset.k || TODAY;
+  if(!editable(k) || excludedDay(E.h.eat.day[k])) return;
   S.nutrition[k] = { calories:calories, protein:protein };
   S.log.eat[k] = nutritionValue(k);
   MOTION = { type:'habit', hid:'eat', k:k, v:S.log.eat[k] };
@@ -1209,7 +1234,7 @@ document.addEventListener('click', function(e){
     $('#avatarFile').click(); return;
   }
   if(e.target.closest('#cloudStatus')){
-    const details = document.querySelector('details');
+    const details = document.querySelector('details.data-backup');
     if(details) details.open = true;
     paintCloud();
     setTimeout(function(){ if($('#cloudEmail') && !cloudUser) $('#cloudEmail').focus(); }, 0);
@@ -1233,7 +1258,7 @@ document.addEventListener('click', function(e){
   const go = e.target.closest('[data-h]');
   if(go){
     const before = E.ultra.streak, hid = go.dataset.h, k = go.dataset.k, v = +go.dataset.v;
-    if(E.h[hid] && E.h[hid].day[k] === 'paused') return;
+    if(!E.h[hid] || !editable(k) || excludedDay(E.h[hid].day[k]) || E.h[hid].day[k] === 'purple') return;
     MOTION = { type:'habit', hid:hid, k:k, v:v };
     if(S.log[hid][k] === v) delete S.log[hid][k]; else S.log[hid][k] = v;
     commit(before); return;
@@ -1243,7 +1268,7 @@ document.addEventListener('click', function(e){
   if(cyc){                                   // click a day to step through its states
     const before = E.ultra.streak;
     const h = HABITS.find(x => x.id === cyc.dataset.cyc), k = cyc.dataset.k;
-    if(!h || !editable(k) || E.h[h.id].day[k] === 'paused') return;
+    if(!h || !editable(k) || excludedDay(E.h[h.id].day[k]) || E.h[h.id].day[k] === 'purple') return;
     if(h.id === 'eat'){
       NUTRITION_DAY = k; render();
       setTimeout(function(){
@@ -1256,7 +1281,7 @@ document.addEventListener('click', function(e){
       return;
     }
     let seq;
-    if(h.mode === 'passive') seq = k >= PASSIVE_START ? [0, undefined] : [2, 0, undefined];
+    if(modeOn(h,k) === 'passive') seq = k >= PASSIVE_START ? [0, undefined] : [2, 0, undefined];
     else seq = h.actions.map(a => a.v).concat([undefined]);
     const next = seq[(seq.indexOf(S.log[h.id][k]) + 1) % seq.length];
     MOTION = { type:'calendar', hid:h.id, k:k };

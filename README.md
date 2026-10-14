@@ -31,6 +31,16 @@ Only the public browser key belongs in `config.js`. Never add a Supabase
 document. Both tables use row-level security keyed to `auth.uid()` and deny
 anonymous table access.
 
+New habits and archived habits share the same private `ultra_state` document.
+The October 2026 update adds the new habit logs while retaining all previous
+logs, nutrition records, and streak history. Open **Previous habits — calendars**
+or **Previous habits — totals** to view the archive. The tracker retries sync
+when the connection returns, as well as on focus and during regular checks.
+
+After opening the published site, sign in with the same Supabase account and
+wait for **Cloud saved**. Browser storage is separate for the local file and
+the published site; Supabase provides the shared copy between them.
+
 ## Publish with GitHub Pages
 
 The repository is already a static Pages-compatible site. When ready, push it
